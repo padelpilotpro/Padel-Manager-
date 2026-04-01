@@ -15,8 +15,6 @@
       font-family: 'Space Grotesk', sans-serif;
       margin: 0;
     }
-
-    /* Top Bar */
     .top-tabs {
       background: linear-gradient(90deg, #1e40af, #3b82f6, #facc15);
       padding: 16px;
@@ -32,12 +30,6 @@
       font-size: 15px;
       padding: 8px 20px;
     }
-    .top-tabs a.active {
-      border-bottom: 4px solid white;
-      padding-bottom: 4px;
-    }
-
-    /* Banners */
     .padelpilot-banner {
       background: #0f172a;
       color: white;
@@ -56,8 +48,6 @@
       font-weight: 900;
       letter-spacing: .15em;
     }
-
-    /* Tournament Info */
     .field-label {
       font-size: 12px;
       font-weight: 700;
@@ -71,8 +61,6 @@
       font-size: 15px;
       width: 100%;
     }
-
-    /* Share Button */
     .share-btn {
       margin-top: 12px;
       width: 100%;
@@ -84,8 +72,6 @@
       cursor: pointer;
       font-size: 15px;
     }
-
-    /* Match Cards */
     .match-card {
       background: linear-gradient(135deg, #f1f5f9, #e0f2fe);
       border-radius: 24px;
@@ -123,7 +109,6 @@
 
 <body>
 
-  <!-- TOP NAV -->
   <div class="top-tabs">
     <a href="index.html" class="active">ARENA</a>
   </div>
@@ -133,7 +118,7 @@
 
   <div class="max-w-5xl mx-auto p-6 space-y-8">
 
-    <!-- TOURNAMENT INFO -->
+    <!-- Tournament Info -->
     <div class="space-y-6">
       <div>
         <label class="field-label">Tournament Name</label>
@@ -156,7 +141,7 @@
       </button>
     </div>
 
-    <!-- SETUP -->
+    <!-- Setup -->
     <div class="bg-gray-100 p-6 rounded-3xl shadow space-y-5">
       <select id="tournamentType" class="w-full p-4 rounded-2xl border text-lg">
         <option value="classic">Classic 3 Point</option>
@@ -166,7 +151,7 @@
         <option value="teamamericano">Team Americano</option>
       </select>
 
-      <textarea id="playersInput" class="w-full p-4 border rounded-2xl h-40 resize-y"
+      <textarea id="playersInput" class="w-full p-4 border rounded-2xl h-40" 
         placeholder="Enter players or team names (one per line)"></textarea>
 
       <div class="flex gap-4 items-end">
@@ -174,30 +159,27 @@
           <label class="field-label">Number of Courts</label>
           <input id="courtsInput" type="number" min="1" value="1" class="w-28 p-4 border rounded-2xl text-center">
         </div>
-        <button onclick="syncTournament()" 
-                class="bg-green-600 text-white px-8 py-4 rounded-2xl font-bold flex-1">
+        <button onclick="syncTournament()" class="bg-green-600 text-white px-8 py-4 rounded-2xl font-bold flex-1">
           Sync Tournament
         </button>
-        <button onclick="generateMatches()" 
-                class="bg-yellow-400 text-black px-8 py-4 rounded-2xl font-bold flex-1">
+        <button onclick="generateMatches()" class="bg-yellow-400 text-black px-8 py-4 rounded-2xl font-bold flex-1">
           Generate Round
         </button>
       </div>
     </div>
 
-    <!-- MATCHES -->
+    <!-- Matches Container -->
     <div id="matchesContainer" class="space-y-6"></div>
-
   </div>
 
   <script>
     // ============== FIREBASE CONFIG ==============
     const firebaseConfig = {
       apiKey: "AIzaSyAKJywAbSKpKHqOs1a-_nQVBuQGkFmF4d4",
-      authDomain: "padelpilot-4531f.firebaseapp.com",
-      databaseURL: "https://padelpilot-4531f-default-rtdb.firebaseio.com",
-      projectId: "padelpilot-4531f",
-      storageBucket: "padelpilot-4531f.appspot.com",
+      authDomain: "padelpilot-b8e47.firebaseapp.com",
+      databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
+      projectId: "padelpilot-b8e47",
+      storageBucket: "padelpilot-b8e47.appspot.com",
       messagingSenderId: "866905934997",
       appId: "1:866905934997:web:97cb8ebc4ed35f9e41f9c"
     };
@@ -217,9 +199,8 @@
       listenTournament();
     }
 
-    // Real-time listener
     function listenTournament() {
-      db.ref('arena/' + meetId).on('value', (snap) => {
+      db.ref('tournaments/' + meetId).on('value', (snap) => {
         const data = snap.val();
         if (!data) return;
 
@@ -235,36 +216,30 @@
       });
     }
 
-    // Sync tournament data
     function syncTournament() {
       const name = document.getElementById('tournamentName').value.trim();
       if (!name) return alert("Please enter a tournament name");
 
       meetId = name.replace(/\s+/g, '-').toLowerCase();
 
-      db.ref('arena/' + meetId).update({
+      db.ref('tournaments/' + meetId).update({
         name: name,
         location: document.getElementById('tournamentLocation').value,
         time: document.getElementById('tournamentTime').value,
         players: document.getElementById('playersInput').value,
         type: document.getElementById('tournamentType').value,
         timestamp: Date.now()
-      }).then(() => {
-        alert("✅ Tournament synced successfully!");
-      });
+      })
+      .then(() => alert("✅ Tournament saved successfully!"))
+      .catch((error) => alert("❌ Save failed: " + error.message));
     }
 
-    // Share link
     document.getElementById('shareTournamentBtn').addEventListener('click', () => {
       if (!meetId) return alert("Please sync the tournament first");
-      
       const url = window.location.origin + window.location.pathname + "?meet=" + meetId;
-      navigator.clipboard.writeText(url).then(() => {
-        alert("✅ Tournament link copied to clipboard!");
-      });
+      navigator.clipboard.writeText(url).then(() => alert("✅ Tournament link copied!"));
     });
 
-    // Generate new round
     function generateMatches() {
       if (!meetId) return alert("Please sync tournament first");
 
@@ -273,7 +248,7 @@
         .map(p => p.trim())
         .filter(p => p.length > 0);
 
-      if (raw.length < 4) return alert("Need at least 4 players or teams");
+      if (raw.length < 4) return alert("Need at least 4 players/teams");
 
       let shuffled = [...raw].sort(() => 0.5 - Math.random());
       let courts = parseInt(document.getElementById('courtsInput').value) || 1;
@@ -290,22 +265,20 @@
         });
       }
 
-      db.ref('arena/' + meetId + '/matches').set(currentMatches)
-        .then(() => alert("New round generated successfully!"));
+      db.ref('tournaments/' + meetId + '/matches').set(currentMatches)
+        .then(() => alert("✅ New round generated!"))
+        .catch(err => alert("Generate failed: " + err.message));
     }
 
-    // Update single score
     function updateScore(index, side, value) {
       if (!currentMatches[index]) return;
-      
       currentMatches[index]['score' + side] = value;
 
-      db.ref('arena/' + meetId + '/matches/' + index).update({
+      db.ref('tournaments/' + meetId + '/matches/' + index).update({
         ['score' + side]: value
       });
     }
 
-    // Render all matches
     function renderMatches() {
       const container = document.getElementById('matchesContainer');
       container.innerHTML = '';
@@ -314,26 +287,17 @@
         const card = document.createElement('div');
         card.className = 'match-card';
         card.innerHTML = `
-          <div class="team-block">
-            \( {m.teamA[0]}<br> \){m.teamA[1]}
-          </div>
-          
+          <div class="team-block">\( {m.teamA[0]}<br> \){m.teamA[1]}</div>
           <div class="score-row">
-            <input type="number" value="${m.scoreA || ''}" 
-                   oninput="updateScore(${i}, 'A', this.value)">
+            <input type="number" value="\( {m.scoreA || ''}" oninput="updateScore( \){i}, 'A', this.value)">
             <span class="text-2xl font-bold text-gray-600">VS</span>
-            <input type="number" value="${m.scoreB || ''}" 
-                   oninput="updateScore(${i}, 'B', this.value)">
+            <input type="number" value="\( {m.scoreB || ''}" oninput="updateScore( \){i}, 'B', this.value)">
           </div>
-          
-          <div class="team-block text-right">
-            \( {m.teamB[0]}<br> \){m.teamB[1]}
-          </div>
+          <div class="team-block text-right">\( {m.teamB[0]}<br> \){m.teamB[1]}</div>
         `;
         container.appendChild(card);
       });
     }
   </script>
-
 </body>
 </html>
