@@ -10,138 +10,45 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    body {
-      background: #ffffff;
-      font-family: 'Space Grotesk', sans-serif;
-      margin: 0;
-    }
+    body { background: #ffffff; font-family: 'Space Grotesk', sans-serif; margin: 0; }
     .top-tabs {
       background: linear-gradient(90deg, #1e40af, #3b82f6, #facc15);
-      padding: 16px;
-      display: flex;
-      justify-content: center;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
+      padding: 16px; display: flex; justify-content: center;
+      font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
     }
-    .top-tabs a {
-      color: white;
-      text-decoration: none;
-      font-size: 15px;
-      padding: 8px 20px;
-    }
-    .padelpilot-banner {
-      background: #0f172a;
-      color: white;
-      text-align: center;
-      padding: 18px;
-      font-size: 24px;
-      font-weight: 900;
-      letter-spacing: .2em;
-    }
-    .arena-banner {
-      background: linear-gradient(90deg, #2563eb, #facc15);
-      color: #0f172a;
-      text-align: center;
-      padding: 28px;
-      font-size: 36px;
-      font-weight: 900;
-      letter-spacing: .15em;
-    }
-    .field-label {
-      font-size: 12px;
-      font-weight: 700;
-      margin-bottom: 4px;
-      color: #0f172a;
-    }
-    .field-input {
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid #d1d5db;
-      font-size: 15px;
-      width: 100%;
-    }
-    .share-btn {
-      margin-top: 12px;
-      width: 100%;
-      background: #3b82f6;
-      color: white;
-      padding: 12px;
-      font-weight: 700;
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 15px;
-    }
+    .top-tabs a { color: white; text-decoration: none; font-size: 15px; padding: 8px 20px; }
+    .padelpilot-banner { background: #0f172a; color: white; text-align: center; padding: 18px; font-size: 24px; font-weight: 900; letter-spacing: .2em; }
+    .arena-banner { background: linear-gradient(90deg, #2563eb, #facc15); color: #0f172a; text-align: center; padding: 28px; font-size: 36px; font-weight: 900; letter-spacing: .15em; }
+    .field-label { font-size: 12px; font-weight: 700; margin-bottom: 4px; color: #0f172a; }
+    .field-input { padding: 10px 12px; border-radius: 10px; border: 1px solid #d1d5db; font-size: 15px; width: 100%; }
+    .share-btn { margin-top: 12px; width: 100%; background: #3b82f6; color: white; padding: 12px; font-weight: 700; border-radius: 12px; cursor: pointer; }
     .match-card {
       background: linear-gradient(135deg, #f1f5f9, #e0f2fe);
-      border-radius: 24px;
-      padding: 28px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      border-radius: 24px; padding: 28px; display: flex; justify-content: space-between; align-items: center;
       box-shadow: 0 10px 25px rgba(0,0,0,.08);
     }
-    .team-block {
-      width: 38%;
-      font-size: 22px;
-      font-weight: 800;
-      color: #0f172a;
-      line-height: 1.3;
-    }
-    .score-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 900;
-      font-size: 22px;
-    }
-    .score-row input {
-      width: 85px;
-      height: 68px;
-      font-size: 28px;
-      text-align: center;
-      border-radius: 14px;
-      border: 2px solid #e5e7eb;
-      background: white;
-    }
+    .team-block { width: 38%; font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.3; }
+    .score-row { display: flex; align-items: center; gap: 12px; font-weight: 900; font-size: 22px; }
+    .score-row input { width: 85px; height: 68px; font-size: 28px; text-align: center; border-radius: 14px; border: 2px solid #e5e7eb; background: white; }
   </style>
 </head>
 
 <body>
 
-  <div class="top-tabs">
-    <a href="index.html" class="active">ARENA</a>
-  </div>
-
+  <div class="top-tabs"><a href="index.html" class="active">ARENA</a></div>
   <div class="padelpilot-banner">PADELPILOT</div>
   <div class="arena-banner">ARENA</div>
 
   <div class="max-w-5xl mx-auto p-6 space-y-8">
-
-    <!-- Tournament Info -->
     <div class="space-y-6">
-      <div>
-        <label class="field-label">Tournament Name</label>
-        <input id="tournamentName" class="field-input" type="text" placeholder="Enter tournament name" />
-      </div>
-
+      <div><label class="field-label">Tournament Name</label><input id="tournamentName" class="field-input" type="text" placeholder="Enter tournament name" /></div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label class="field-label">Location</label>
-          <input id="tournamentLocation" class="field-input" type="text" placeholder="Enter location" />
-        </div>
-        <div>
-          <label class="field-label">Time</label>
-          <input id="tournamentTime" class="field-input" type="time" />
-        </div>
+        <div><label class="field-label">Location</label><input id="tournamentLocation" class="field-input" type="text" placeholder="Enter location" /></div>
+        <div><label class="field-label">Time</label><input id="tournamentTime" class="field-input" type="time" /></div>
       </div>
-
-      <button id="shareTournamentBtn" class="share-btn">
-        Share Tournament Link
-      </button>
+      <button id="shareTournamentBtn" class="share-btn">Share Tournament Link</button>
     </div>
 
-    <!-- Setup -->
     <div class="bg-gray-100 p-6 rounded-3xl shadow space-y-5">
       <select id="tournamentType" class="w-full p-4 rounded-2xl border text-lg">
         <option value="classic">Classic 3 Point</option>
@@ -150,38 +57,27 @@
         <option value="mixed">Mixed Americano</option>
         <option value="teamamericano">Team Americano</option>
       </select>
-
-      <textarea id="playersInput" class="w-full p-4 border rounded-2xl h-40" 
-        placeholder="Enter players or team names (one per line)"></textarea>
-
+      <textarea id="playersInput" class="w-full p-4 border rounded-2xl h-40" placeholder="Enter players or team names (one per line)"></textarea>
       <div class="flex gap-4 items-end">
-        <div>
-          <label class="field-label">Number of Courts</label>
-          <input id="courtsInput" type="number" min="1" value="1" class="w-28 p-4 border rounded-2xl text-center">
-        </div>
-        <button onclick="syncTournament()" class="bg-green-600 text-white px-8 py-4 rounded-2xl font-bold flex-1">
-          Sync Tournament
-        </button>
-        <button onclick="generateMatches()" class="bg-yellow-400 text-black px-8 py-4 rounded-2xl font-bold flex-1">
-          Generate Round
-        </button>
+        <div><label class="field-label">Number of Courts</label><input id="courtsInput" type="number" min="1" value="1" class="w-28 p-4 border rounded-2xl text-center"></div>
+        <button onclick="syncTournament()" class="bg-green-600 text-white px-8 py-4 rounded-2xl font-bold flex-1">Sync Tournament</button>
+        <button onclick="generateMatches()" class="bg-yellow-400 text-black px-8 py-4 rounded-2xl font-bold flex-1">Generate Round</button>
       </div>
     </div>
 
-    <!-- Matches Container -->
     <div id="matchesContainer" class="space-y-6"></div>
   </div>
 
   <script>
-    // ============== FIREBASE CONFIG ==============
+    // ============== YOUR NEW PROJECT CONFIG ==============
     const firebaseConfig = {
-      apiKey: "AIzaSyAKJywAbSKpKHqOs1a-_nQVBuQGkFmF4d4",
+      apiKey: "AIzaSyAw5Y0Z8THy2guZ8BK7Q0D5LkHNeP9",
       authDomain: "padelpilot-b8e47.firebaseapp.com",
       databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
       projectId: "padelpilot-b8e47",
       storageBucket: "padelpilot-b8e47.appspot.com",
-      messagingSenderId: "866905934997",
-      appId: "1:866905934997:web:97cb8ebc4ed35f9e41f9c"
+      messagingSenderId: "1047531628612",
+      appId: "1:1047531628612:web:0ee8f8bd27113c41f9c"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -194,8 +90,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('meet')) {
       meetId = urlParams.get('meet');
-      document.getElementById('tournamentName').value = 
-        meetId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      document.getElementById('tournamentName').value = meetId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       listenTournament();
     }
 
@@ -203,12 +98,10 @@
       db.ref('tournaments/' + meetId).on('value', (snap) => {
         const data = snap.val();
         if (!data) return;
-
         document.getElementById('tournamentLocation').value = data.location || '';
         document.getElementById('tournamentTime').value = data.time || '';
         document.getElementById('playersInput').value = data.players || '';
         document.getElementById('tournamentType').value = data.type || 'classic';
-
         if (data.matches) {
           currentMatches = data.matches;
           renderMatches();
@@ -219,7 +112,6 @@
     function syncTournament() {
       const name = document.getElementById('tournamentName').value.trim();
       if (!name) return alert("Please enter a tournament name");
-
       meetId = name.replace(/\s+/g, '-').toLowerCase();
 
       db.ref('tournaments/' + meetId).update({
@@ -237,32 +129,21 @@
     document.getElementById('shareTournamentBtn').addEventListener('click', () => {
       if (!meetId) return alert("Please sync the tournament first");
       const url = window.location.origin + window.location.pathname + "?meet=" + meetId;
-      navigator.clipboard.writeText(url).then(() => alert("✅ Tournament link copied!"));
+      navigator.clipboard.writeText(url).then(() => alert("✅ Link copied!"));
     });
 
     function generateMatches() {
       if (!meetId) return alert("Please sync tournament first");
-
-      let raw = document.getElementById('playersInput').value
-        .split('\n')
-        .map(p => p.trim())
-        .filter(p => p.length > 0);
-
+      let raw = document.getElementById('playersInput').value.split('\n').map(p => p.trim()).filter(p => p);
       if (raw.length < 4) return alert("Need at least 4 players/teams");
 
       let shuffled = [...raw].sort(() => 0.5 - Math.random());
       let courts = parseInt(document.getElementById('courtsInput').value) || 1;
-
       currentMatches = [];
 
       for (let i = 0; i < courts * 4; i += 4) {
         if (!shuffled[i + 3]) break;
-        currentMatches.push({
-          teamA: [shuffled[i], shuffled[i + 1]],
-          teamB: [shuffled[i + 2], shuffled[i + 3]],
-          scoreA: "",
-          scoreB: ""
-        });
+        currentMatches.push({ teamA: [shuffled[i], shuffled[i+1]], teamB: [shuffled[i+2], shuffled[i+3]], scoreA: "", scoreB: "" });
       }
 
       db.ref('tournaments/' + meetId + '/matches').set(currentMatches)
@@ -273,16 +154,12 @@
     function updateScore(index, side, value) {
       if (!currentMatches[index]) return;
       currentMatches[index]['score' + side] = value;
-
-      db.ref('tournaments/' + meetId + '/matches/' + index).update({
-        ['score' + side]: value
-      });
+      db.ref('tournaments/' + meetId + '/matches/' + index).update({ ['score' + side]: value });
     }
 
     function renderMatches() {
       const container = document.getElementById('matchesContainer');
       container.innerHTML = '';
-
       currentMatches.forEach((m, i) => {
         const card = document.createElement('div');
         card.className = 'match-card';
