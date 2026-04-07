@@ -21,13 +21,11 @@
     <p id="tournamentTitle" class="text-gray-500 mt-2"></p>
   </div>
 
-  <div id="leaderboardContainer" class="bg-white rounded-3xl shadow-sm p-6">
-    <!-- Leaderboard will be populated here -->
-  </div>
+  <div id="leaderboardContainer" class="bg-white rounded-3xl shadow-sm p-6"></div>
 </div>
 
 <script>
-const firebaseConfig = { /* same config as index.html */ 
+const firebaseConfig = { /* same as index.html */ 
   apiKey: "AIzaSyAw5Y0Z8THy2guZ8BK7Q0D5LkHNeP9",
   authDomain: "padelpilot-b8e47.firebaseapp.com",
   databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
@@ -41,27 +39,37 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 const params = new URLSearchParams(window.location.search);
-const meetId = params.get("meet") || "default-session";
+const meetId = params.get("meet");
 
-db.ref("tournaments/" + meetId).on("value", (snap) => {
-  const data = snap.val();
-  if (!data) return;
+if (meetId) {
+  db.ref("tournaments/" + meetId).on("value", (snap) => {
+    const data = snap.val() || {};
+    document.getElementById("tournamentTitle").textContent = data.name || "Padel Tournament";
 
-  document.getElementById("tournamentTitle").textContent = data.name || "Padel Tournament";
+    let html = `<div class="text-lg font-semibold mb-6">Current Standings</div>`;
+    html += `<div class="space-y-3">`;
 
-  // For now, simple player list (we can improve later with wins/points)
-  let html = `<div class="text-lg font-semibold mb-6">Current Players (${(data.players || []).length})</div>`;
-  html += `<div class="space-y-3">`;
-  (data.players || []).forEach((player, i) => {
-    html += `
-      <div class="flex items-center justify-between bg-gray-50 px-6 py-4 rounded-2xl">
-        <span class="font-medium">${i+1}. ${player.charAt(0).toUpperCase() + player.slice(1)}</span>
-        <span class="text-gray-400 text-sm">0 pts</span>
-      </div>`;
+    (data.players || []).forEach((player, i) => {
+      let wins = 0;
+      (data.matches || []).forEach(m => {
+        const scoreA = parseFloat(m.scoreA) || 0;
+        const scoreB = parseFloat(m.scoreB) || 0;
+        if (m.teamA.includes(player) && scoreA > scoreB) wins++;
+        if (m.teamB.includes(player) && scoreB > scoreA) wins++;
+      });
+
+      html += `
+        <div class="flex items-center justify-between bg-gray-50 px-6 py-4 rounded-2xl">
+          <span class="font-medium">${i+1}. ${player.charAt(0).toUpperCase() + player.slice(1)}</span>
+          <span class="text-blue-600 font-bold">${wins} wins</span>
+        </div>`;
+    });
+    html += `</div>`;
+    document.getElementById("leaderboardContainer").innerHTML = html;
   });
-  html += `</div>`;
-  document.getElementById("leaderboardContainer").innerHTML = html;
-});
+} else {
+  document.getElementById("leaderboardContainer").innerHTML = `<div class="text-center py-12 text-gray-400">No tournament loaded. Go back to Arena.</div>`;
+}
 </script>
 </body>
 </html>
