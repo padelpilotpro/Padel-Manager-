@@ -1,30 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PadelPilot Arena</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PadelPilot Arena</title>
 
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 
-<style>
-body {
-  background: #f8fafc;
-  font-family: Inter, sans-serif;
-  color: #0f172a;
-}
-.match-card {
-  background: white;
-  border-radius: 20px;
-  padding: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid #e5e7eb;
-}
-</style>
+  <style>
+    body {
+      background: #f8fafc;
+      font-family: Inter, system-ui, sans-serif;
+      color: #0f172a;
+    }
+    .match-card {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+  </style>
 </head>
 
 <body>
@@ -33,27 +34,21 @@ body {
 
   <!-- HEADER -->
   <div class="text-center py-6 space-y-1">
-    <div class="text-3xl font-black tracking-widest text-gray-900">
-      PADELPILOT
-    </div>
-    <div class="text-blue-600 text-2xl font-bold">
-      Arena
-    </div>
+    <div class="text-3xl font-black tracking-widest text-gray-900">PADELPILOT</div>
+    <div class="text-blue-600 text-2xl font-bold">Arena</div>
   </div>
 
   <!-- TOURNAMENT SETUP -->
   <div class="bg-white border rounded-2xl p-6 shadow-sm space-y-5">
     <div>
       <label class="text-sm font-semibold text-gray-600 block mb-1">Tournament Name</label>
-      <input id="tournamentName" class="w-full p-4 border rounded-2xl text-lg" 
-             placeholder="e.g. Thursday Night Padel">
+      <input id="tournamentName" class="w-full p-4 border rounded-2xl text-lg" placeholder="e.g. Thursday Night Padel">
     </div>
 
     <div class="grid grid-cols-2 gap-4">
       <div>
         <label class="text-sm font-semibold text-gray-600 block mb-1">Location</label>
-        <input id="tournamentLocation" class="w-full p-4 border rounded-2xl" 
-               placeholder="e.g. Al Ain Club">
+        <input id="tournamentLocation" class="w-full p-4 border rounded-2xl" placeholder="e.g. Al Ain Club">
       </div>
       <div>
         <label class="text-sm font-semibold text-gray-600 block mb-1">Time</label>
@@ -63,7 +58,7 @@ body {
 
     <button onclick="createTournament()" 
             class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg transition">
-      Create Tournament
+      Create / Save Tournament
     </button>
   </div>
 
@@ -72,8 +67,7 @@ body {
     <div class="text-sm text-gray-500 mb-2">Share this link with players</div>
     <div class="flex gap-2">
       <input id="shareLink" class="flex-1 p-4 border rounded-2xl text-sm bg-gray-50" readonly />
-      <button onclick="copyLink()" 
-              class="bg-blue-600 text-white px-8 rounded-2xl font-semibold">Copy</button>
+      <button onclick="copyLink()" class="bg-blue-600 text-white px-8 rounded-2xl font-semibold">Copy</button>
     </div>
   </div>
 
@@ -108,12 +102,15 @@ body {
 </div>
 
 <script>
-// 🔥 FIREBASE CONFIG
+// ============== YOUR FIREBASE CONFIG ==============
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  databaseURL: "YOUR_DB_URL",
-  projectId: "YOUR_ID"
+  apiKey: "AIzaSyAw5Y0Z8THy2guZ8BK7Q0D5LkHNeP9",
+  authDomain: "padelpilot-b8e47.firebaseapp.com",
+  databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
+  projectId: "padelpilot-b8e47",
+  storageBucket: "padelpilot-b8e47.appspot.com",
+  messagingSenderId: "1047531628612",
+  appId: "1:1047531628612:web:0ee8f8bd27113c41f9c"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -122,110 +119,108 @@ const db = firebase.database();
 let meetId = "default-session";
 let players = [];
 let matches = [];
-let restHistory = {};
-let teammateHistory = {};
+let resting = [];
 
-const EXPIRY = 48 * 60 * 60 * 1000;
+const EXPIRY = 48 * 60 * 60 * 1000; // 48 hours
 
-// INIT
-load();
-
-// LOAD DATA + AUTO LOAD FROM URL
+// Load data
 function load() {
   const params = new URLSearchParams(window.location.search);
   if (params.has("meet")) {
     meetId = params.get("meet");
   }
 
-  const ref = db.ref("tournaments/" + meetId);
-
-  ref.on("value", snap => {
-    let data = snap.val();
+  db.ref("tournaments/" + meetId).on("value", (snap) => {
+    const data = snap.val();
     if (!data) return;
 
     if (Date.now() - (data.timestamp || 0) > EXPIRY) {
-      ref.set({ players: [], matches: [], timestamp: Date.now() });
-      alert("Session was older than 48h and has been reset.");
+      db.ref("tournaments/" + meetId).set(null);
+      alert("Old session expired and has been reset.");
       return;
     }
 
     players = data.players || [];
     matches = data.matches || [];
+    resting = data.resting || [];
 
-    // Fill tournament info if available
-    if (data.name) document.getElementById("tournamentName").value = data.name;
-    if (data.location) document.getElementById("tournamentLocation").value = data.location;
-    if (data.time) document.getElementById("tournamentTime").value = data.time;
+    document.getElementById("tournamentName").value = data.name || "";
+    document.getElementById("tournamentLocation").value = data.location || "";
+    document.getElementById("tournamentTime").value = data.time || "";
+
+    document.getElementById("shareLink").value = window.location.href;
 
     renderPlayers();
     renderMatches();
+    renderResting();
     updatePlayerCount();
   });
-
-  document.getElementById("shareLink").value = window.location.href;
 }
 
-// CREATE TOURNAMENT
+// Create / Save Tournament
 function createTournament() {
   const name = document.getElementById("tournamentName").value.trim();
   if (!name) return alert("Please enter a tournament name");
 
-  const location = document.getElementById("tournamentLocation").value.trim();
-  const time = document.getElementById("tournamentTime").value;
-
   meetId = name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
 
-  db.ref("tournaments/" + meetId).set({
-    name,
-    location,
-    time,
+  db.ref("tournaments/" + meetId).update({
+    name: name,
+    location: document.getElementById("tournamentLocation").value.trim(),
+    time: document.getElementById("tournamentTime").value,
     players: players,
     matches: matches,
+    resting: resting,
     timestamp: Date.now()
-  });
-
-  const newUrl = window.location.origin + window.location.pathname + "?meet=" + meetId;
-  window.history.pushState({}, "", newUrl);
-  document.getElementById("shareLink").value = newUrl;
-
-  alert("✅ Tournament created successfully!\nShare the link with your players.");
+  }).then(() => {
+    const newUrl = window.location.origin + window.location.pathname + "?meet=" + meetId;
+    window.history.pushState({}, "", newUrl);
+    document.getElementById("shareLink").value = newUrl;
+    alert("✅ Tournament saved successfully!\nShare the link with players.");
+  }).catch(err => alert("Save failed: " + err.message));
 }
 
-// ADD PLAYER
+// Add Player
 function addPlayer() {
-  let name = document.getElementById("playerInput").value.trim().toLowerCase();
+  let name = document.getElementById("playerInput").value.trim();
   if (!name) return;
+  name = name.toLowerCase();
 
   if (!players.includes(name)) {
     players.push(name);
-    save();
+    saveData();
   }
   document.getElementById("playerInput").value = "";
+  renderPlayers();
+  updatePlayerCount();
 }
 
-// ADD ME
+// Add Me
 function addMe() {
-  let name = localStorage.getItem("name") || prompt("Enter your name");
+  let name = localStorage.getItem("myName") || prompt("Enter your name:");
   if (!name) return;
-  name = name.toLowerCase().trim();
-  localStorage.setItem("name", name);
+  name = name.trim().toLowerCase();
+  localStorage.setItem("myName", name);
 
   if (!players.includes(name)) {
     players.push(name);
-    save();
+    saveData();
   }
+  renderPlayers();
+  updatePlayerCount();
 }
 
-// SAVE TO FIREBASE
-function save() {
+// Save to Firebase
+function saveData() {
   db.ref("tournaments/" + meetId).update({
-    players,
-    matches,
+    players: players,
+    matches: matches,
+    resting: resting,
     timestamp: Date.now()
   });
 }
 
-// RENDER PLAYERS
+// Render Players
 function renderPlayers() {
   const el = document.getElementById("playersList");
   el.innerHTML = players.map((p, i) => `
@@ -239,7 +234,7 @@ function updatePlayerCount() {
   document.getElementById("playerCount").textContent = players.length;
 }
 
-// GENERATE MATCHES (your existing logic)
+// Generate Matches
 function generateMatches() {
   if (players.length < 4) return alert("Need at least 4 players");
 
@@ -247,43 +242,30 @@ function generateMatches() {
   let courts = Math.floor(players.length / 4);
   let totalPlaying = courts * 4;
 
-  let resting = players.length > totalPlaying ? shuffled.slice(totalPlaying) : [];
+  resting = players.length > totalPlaying ? shuffled.slice(totalPlaying) : [];
   let playing = shuffled.slice(0, totalPlaying);
 
   matches = [];
 
   for (let i = 0; i < playing.length; i += 4) {
-    let teamA = [playing[i], playing[i+1]];
-    let teamB = [playing[i+2], playing[i+3]];
-
-    saveTeammates(teamA);
-    saveTeammates(teamB);
-
-    matches.push({ teamA, teamB });
+    matches.push({
+      teamA: [playing[i], playing[i+1]],
+      teamB: [playing[i+2], playing[i+3]]
+    });
   }
 
-  renderResting(resting);
-  save();
+  renderResting();
+  saveData();
+  renderMatches();
 }
 
-// Rest of your functions (unchanged)
-function updateRest(list) {
-  list.forEach(p => restHistory[p] = (restHistory[p] || 0) + 1);
+// Render Resting
+function renderResting() {
+  const el = document.getElementById("restingPlayers");
+  el.innerText = resting.length ? resting.map(capitalize).join(", ") : "None";
 }
 
-function saveTeammates(team) {
-  let [a, b] = team;
-  if (!teammateHistory[a]) teammateHistory[a] = [];
-  if (!teammateHistory[b]) teammateHistory[b] = [];
-  teammateHistory[a].push(b);
-  teammateHistory[b].push(a);
-}
-
-function renderResting(list) {
-  document.getElementById("restingPlayers").innerText = 
-    list.length ? list.map(capitalize).join(", ") : "None";
-}
-
+// Render Matches
 function renderMatches() {
   const el = document.getElementById("matchesContainer");
   if (!matches.length) {
@@ -293,14 +275,15 @@ function renderMatches() {
 
   el.innerHTML = matches.map((m, i) => `
     <div class="match-card">
-      <div class="text-right">
+      <div class="text-right font-medium">
         ${capitalize(m.teamA[0])}<br>
         ${capitalize(m.teamA[1])}
       </div>
       <div class="text-center text-gray-400 text-sm">
-        Court ${i+1}<br><span class="font-bold text-lg">VS</span>
+        Court ${i+1}<br>
+        <span class="font-bold text-lg text-black">VS</span>
       </div>
-      <div>
+      <div class="font-medium">
         ${capitalize(m.teamB[0])}<br>
         ${capitalize(m.teamB[1])}
       </div>
@@ -310,12 +293,15 @@ function renderMatches() {
 
 function copyLink() {
   navigator.clipboard.writeText(window.location.href);
-  alert("✅ Link copied to clipboard");
+  alert("✅ Link copied!");
 }
 
 function capitalize(name) {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
+
+// Initialize
+load();
 </script>
 
 </body>
