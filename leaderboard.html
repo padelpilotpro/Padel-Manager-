@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PadelPilot - Leaderboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+<div class="top-tabs bg-gradient-to-r from-blue-700 to-indigo-600 text-white p-4 flex justify-center gap-10 font-bold">
+  <a href="index.html">ARENA</a>
+  <a href="leaderboard.html" class="active">LEADERBOARD</a>
+</div>
+
+<div class="max-w-4xl mx-auto p-6">
+  <div class="text-center mb-10">
+    <h1 class="text-4xl font-black">Leaderboard</h1>
+    <p id="tournamentTitle" class="text-gray-500 mt-2"></p>
+  </div>
+
+  <div id="leaderboardContainer" class="bg-white rounded-3xl shadow-sm p-6">
+    <!-- Leaderboard will be populated here -->
+  </div>
+</div>
+
+<script>
+const firebaseConfig = { /* same config as index.html */ 
+  apiKey: "AIzaSyAw5Y0Z8THy2guZ8BK7Q0D5LkHNeP9",
+  authDomain: "padelpilot-b8e47.firebaseapp.com",
+  databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
+  projectId: "padelpilot-b8e47",
+  storageBucket: "padelpilot-b8e47.appspot.com",
+  messagingSenderId: "1047531628612",
+  appId: "1:1047531628612:web:0ee8f8bd27113c41f9c"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const params = new URLSearchParams(window.location.search);
+const meetId = params.get("meet") || "default-session";
+
+db.ref("tournaments/" + meetId).on("value", (snap) => {
+  const data = snap.val();
+  if (!data) return;
+
+  document.getElementById("tournamentTitle").textContent = data.name || "Padel Tournament";
+
+  // For now, simple player list (we can improve later with wins/points)
+  let html = `<div class="text-lg font-semibold mb-6">Current Players (${(data.players || []).length})</div>`;
+  html += `<div class="space-y-3">`;
+  (data.players || []).forEach((player, i) => {
+    html += `
+      <div class="flex items-center justify-between bg-gray-50 px-6 py-4 rounded-2xl">
+        <span class="font-medium">${i+1}. ${player.charAt(0).toUpperCase() + player.slice(1)}</span>
+        <span class="text-gray-400 text-sm">0 pts</span>
+      </div>`;
+  });
+  html += `</div>`;
+  document.getElementById("leaderboardContainer").innerHTML = html;
+});
+</script>
+</body>
+</html>
