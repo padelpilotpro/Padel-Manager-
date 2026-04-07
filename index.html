@@ -18,12 +18,19 @@
     .match-card {
       background: white;
       border-radius: 20px;
-      padding: 24px;
+      padding: 28px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border: 1px solid #e5e7eb;
       box-shadow: 0 4px 15px -2px rgb(0 0 0 / 0.1);
+    }
+    .team-block {
+      width: 38%;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.4;
     }
     .top-tabs {
       background: linear-gradient(90deg, #1e40af, #3b82f6);
@@ -35,10 +42,10 @@
       font-weight: 700;
     }
     .score-input {
-      width: 70px;
-      height: 50px;
+      width: 75px;
+      height: 55px;
       text-align: center;
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 700;
       border: 2px solid #e5e7eb;
       border-radius: 12px;
@@ -145,21 +152,26 @@ let meetId = null;
 let players = [];
 let matches = [];
 
-// Load tournament
+// Improved Load Function
 function loadTournament() {
   const params = new URLSearchParams(window.location.search);
   if (params.has("meet")) {
     meetId = params.get("meet");
-  } else {
-    document.getElementById("shareLink").value = "Create tournament first";
+  }
+
+  if (!meetId) {
+    document.getElementById("shareLink").value = "Create a tournament first";
     return;
   }
 
+  // Load and listen for changes
   db.ref("tournaments/" + meetId).on("value", (snap) => {
     const data = snap.val() || {};
+
     players = data.players || [];
     matches = data.matches || [];
 
+    // Populate form fields
     document.getElementById("tournamentName").value = data.name || "";
     document.getElementById("tournamentLocation").value = data.location || "";
     document.getElementById("tournamentTime").value = data.time || "";
@@ -193,7 +205,7 @@ function createTournament() {
   }).then(() => {
     document.getElementById("shareLink").value = newUrl;
     alert("✅ Tournament saved successfully!");
-  });
+  }).catch(err => alert("Save failed: " + err.message));
 }
 
 function addPlayer() {
@@ -218,17 +230,17 @@ function generateMatches() {
   if (players.length < 4) return alert("Need at least 4 players");
 
   const courts = parseInt(document.getElementById("courtsInput").value) || 1;
-  const totalPlayersNeeded = courts * 4;
+  const maxPlayers = courts * 4;
 
   let shuffled = [...players].sort(() => 0.5 - Math.random());
-  let playing = shuffled.slice(0, totalPlayersNeeded);
+  let playing = shuffled.slice(0, maxPlayers);
 
   matches = [];
   for (let i = 0; i < playing.length; i += 4) {
     if (i + 3 >= playing.length) break;
     matches.push({
-      teamA: [playing[i], playing[i+1]],
-      teamB: [playing[i+2], playing[i+3]],
+      teamA: [playing[i], playing[i + 1]],
+      teamB: [playing[i + 2], playing[i + 3]],
       scoreA: "",
       scoreB: ""
     });
@@ -241,7 +253,7 @@ function generateMatches() {
 
 function updateScore(index, side, value) {
   if (!matches[index]) return;
-  matches[index]["score" + side] = value;
+  matches[index]["score" + side] = value || "";
   saveData();
 }
 
@@ -260,11 +272,10 @@ function updatePlayerCount() {
 
 function renderResting() {
   const courts = parseInt(document.getElementById("courtsInput").value) || 1;
-  const totalPlaying = courts * 4;
-  const restingPlayers = players.length > totalPlaying 
-    ? players.slice(totalPlaying).map(capitalize).join(" • ") 
+  const restingList = players.length > (courts * 4) 
+    ? players.slice(courts * 4).map(capitalize).join(" • ") 
     : "None";
-  document.getElementById("restingPlayers").innerHTML = restingPlayers;
+  document.getElementById("restingPlayers").innerHTML = restingList;
 }
 
 function renderMatches() {
@@ -280,21 +291,25 @@ function renderMatches() {
     const card = document.createElement('div');
     card.className = 'match-card';
     card.innerHTML = `
-      <div class="text-right font-medium">
-        \( {capitalize(m.teamA[0])}<br> \){capitalize(m.teamA[1])}
+      <div class="team-block">
+        ${capitalize(m.teamA[0])}<br>
+        <span class="text-sm text-gray-500">${capitalize(m.teamA[1])}</span>
       </div>
-      <div class="text-center">
-        <div class="text-xs text-gray-400">Court ${i+1}</div>
-        <div class="flex items-center gap-3 justify-center mt-2">
+
+      <div class="flex flex-col items-center gap-3">
+        <div class="flex items-center gap-4">
           <input type="number" class="score-input" value="${m.scoreA || ''}" 
                  oninput="updateScore(${i}, 'A', this.value)">
-          <span class="text-2xl font-bold text-gray-600">VS</span>
+          <span class="text-3xl font-bold text-gray-400">VS</span>
           <input type="number" class="score-input" value="${m.scoreB || ''}" 
                  oninput="updateScore(${i}, 'B', this.value)">
         </div>
+        <div class="text-xs text-gray-400">Court ${i+1}</div>
       </div>
-      <div class="font-medium">
-        \( {capitalize(m.teamB[0])}<br> \){capitalize(m.teamB[1])}
+
+      <div class="team-block">
+        ${capitalize(m.teamB[0])}<br>
+        <span class="text-sm text-gray-500">${capitalize(m.teamB[1])}</span>
       </div>
     `;
     container.appendChild(card);
@@ -310,7 +325,7 @@ function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-// Initialize
+// Initialize on page load
 loadTournament();
 </script>
 </body>
