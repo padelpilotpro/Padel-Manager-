@@ -4,21 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PadelPilot Arena</title>
+
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    body { background: #f8fafc; font-family: Inter, system-ui, sans-serif; color: #0f172a; }
+    body { 
+      background: #f8fafc; 
+      font-family: Inter, system-ui, sans-serif; 
+      color: #0f172a; 
+    }
     .match-card {
-      background: white; border-radius: 20px; padding: 24px; display: flex;
-      justify-content: space-between; align-items: center; border: 1px solid #e5e7eb;
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #e5e7eb;
       box-shadow: 0 4px 15px -2px rgb(0 0 0 / 0.1);
     }
     .top-tabs {
       background: linear-gradient(90deg, #1e40af, #3b82f6);
-      padding: 14px; display: flex; justify-content: center; gap: 40px;
-      color: white; font-weight: 700;
+      padding: 14px; 
+      display: flex; 
+      justify-content: center; 
+      gap: 40px;
+      color: white; 
+      font-weight: 700;
     }
   </style>
 </head>
@@ -36,57 +50,75 @@
     <div class="text-blue-600 text-3xl font-bold">Arena</div>
   </div>
 
-  <!-- Tournament Setup + Share + Add Player (same as before) -->
+  <!-- Tournament Setup -->
   <div class="bg-white border rounded-3xl p-8 shadow-sm space-y-6">
     <div>
       <label class="text-sm font-semibold text-gray-600 block mb-2">Tournament Name</label>
       <input id="tournamentName" class="w-full p-5 border rounded-2xl text-xl" placeholder="e.g. Thursday Night Padel">
     </div>
     <div class="grid grid-cols-2 gap-6">
-      <div><label class="text-sm font-semibold text-gray-600 block mb-2">Location</label>
-        <input id="tournamentLocation" class="w-full p-5 border rounded-2xl" placeholder="e.g. Al Ain Club"></div>
-      <div><label class="text-sm font-semibold text-gray-600 block mb-2">Time</label>
-        <input id="tournamentTime" type="time" class="w-full p-5 border rounded-2xl"></div>
+      <div>
+        <label class="text-sm font-semibold text-gray-600 block mb-2">Location</label>
+        <input id="tournamentLocation" class="w-full p-5 border rounded-2xl" placeholder="e.g. Al Ain Club">
+      </div>
+      <div>
+        <label class="text-sm font-semibold text-gray-600 block mb-2">Time</label>
+        <input id="tournamentTime" type="time" class="w-full p-5 border rounded-2xl">
+      </div>
     </div>
-    <button onclick="createTournament()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-3xl font-bold text-xl">Create / Save Tournament</button>
+    <button onclick="createTournament()" 
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-3xl font-bold text-xl transition">
+      Create / Save Tournament
+    </button>
   </div>
 
+  <!-- Share -->
   <div class="bg-white border rounded-3xl p-6 shadow-sm">
-    <div class="text-sm text-gray-500 mb-3">Share this link</div>
+    <div class="text-sm text-gray-500 mb-3">Share this link with players</div>
     <div class="flex gap-3">
       <input id="shareLink" class="flex-1 p-5 border rounded-3xl text-sm bg-gray-50 font-mono" readonly />
       <button onclick="copyLink()" class="bg-blue-600 text-white px-10 rounded-3xl font-semibold">Copy</button>
     </div>
   </div>
 
+  <!-- Add Player -->
   <div class="flex gap-3">
     <input id="playerInput" class="flex-1 p-5 border rounded-3xl text-lg" placeholder="Enter player name">
     <button onclick="addPlayer()" class="bg-blue-600 text-white px-10 rounded-3xl font-medium">Add Player</button>
   </div>
 
+  <!-- Players List -->
   <div class="bg-white rounded-3xl border shadow-sm p-6">
     <div class="font-semibold text-lg mb-4">Players • <span id="playerCount" class="text-blue-600">0</span></div>
     <div id="playersList" class="space-y-3"></div>
   </div>
 
+  <!-- Courts & Generate -->
   <div class="bg-white border rounded-3xl p-6 flex items-center gap-6">
     <div class="flex-1">
       <label class="text-sm font-semibold text-gray-600 block mb-2">Number of Courts</label>
-      <input id="courtsInput" type="number" min="1" value="1" class="w-full p-5 border rounded-2xl text-center text-xl">
+      <input id="courtsInput" type="number" min="1" value="1" 
+             class="w-full p-5 border rounded-2xl text-center text-xl">
     </div>
-    <button onclick="generateMatches()" class="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 py-6 rounded-3xl font-bold text-2xl shadow-md">🎲 Generate Round</button>
+    <button onclick="generateMatches()" 
+            class="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 py-6 rounded-3xl font-bold text-2xl shadow-md">
+      🎲 Generate Round
+    </button>
   </div>
 
+  <!-- Resting -->
   <div class="bg-amber-50 border border-amber-200 rounded-3xl p-6">
     <div class="text-amber-700 font-semibold mb-2">Currently Resting</div>
     <div id="restingPlayers" class="text-amber-800 text-lg">None</div>
   </div>
 
+  <!-- Matches -->
   <div id="matchesContainer" class="space-y-5"></div>
+
 </div>
 
 <script>
-// Your existing script (Firebase config + functions) remains the same as last version
+// ============== FIREBASE CONFIG ==============
 const firebaseConfig = {
   apiKey: "AIzaSyAw5Y0Z8THy2guZ8BK7Q0D5LkHNeP9",
   authDomain: "padelpilot-b8e47.firebaseapp.com",
@@ -100,26 +132,39 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let meetId = "default-session";
+let meetId = null;
 let players = [];
 let matches = [];
 let resting = [];
 
-function load() { /* same as before */ 
+// Load from URL and Firebase
+function loadTournament() {
   const params = new URLSearchParams(window.location.search);
-  if (params.has("meet")) meetId = params.get("meet");
+  if (params.has("meet")) {
+    meetId = params.get("meet");
+  } else {
+    // If no meet in URL, show message
+    document.getElementById("shareLink").value = "Create a tournament first";
+    return;
+  }
 
   db.ref("tournaments/" + meetId).on("value", (snap) => {
-    const data = snap.val() || {};
+    const data = snap.val();
+    if (!data) {
+      document.getElementById("shareLink").value = window.location.href;
+      return;
+    }
+
     players = data.players || [];
     matches = data.matches || [];
     resting = data.resting || [];
 
+    // Fill form fields
     document.getElementById("tournamentName").value = data.name || "";
     document.getElementById("tournamentLocation").value = data.location || "";
     document.getElementById("tournamentTime").value = data.time || "";
-    document.getElementById("shareLink").value = window.location.href;
     document.getElementById("courtsInput").value = data.courts || 1;
+    document.getElementById("shareLink").value = window.location.href;
 
     renderPlayers();
     renderMatches();
@@ -128,77 +173,123 @@ function load() { /* same as before */
   });
 }
 
-function createTournament() { /* same */ 
-  const name = document.getElementById("tournamentName").value.trim();
+function createTournament() {
+  let name = document.getElementById("tournamentName").value.trim();
   if (!name) return alert("Please enter a tournament name");
+
   meetId = name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
 
+  const newUrl = window.location.origin + window.location.pathname + "?meet=" + meetId;
+  window.history.pushState({}, "", newUrl);
+
   db.ref("tournaments/" + meetId).update({
-    name, location: document.getElementById("tournamentLocation").value.trim(),
+    name: name,
+    location: document.getElementById("tournamentLocation").value.trim(),
     time: document.getElementById("tournamentTime").value,
-    players, matches, resting,
+    players: players,
+    matches: matches,
+    resting: resting,
     courts: parseInt(document.getElementById("courtsInput").value) || 1,
     timestamp: Date.now()
   }).then(() => {
-    const newUrl = window.location.origin + window.location.pathname + "?meet=" + meetId;
-    history.pushState({}, "", newUrl);
     document.getElementById("shareLink").value = newUrl;
-    alert("✅ Saved!");
-  });
+    alert("✅ Tournament created and saved!");
+  }).catch(err => alert("Save error: " + err.message));
 }
 
-function addPlayer() { /* same */ 
-  let name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if (!name || players.includes(name)) return;
+function addPlayer() {
+  let name = document.getElementById("playerInput").value.trim();
+  if (!name) return;
+  name = name.toLowerCase();
+  if (players.includes(name)) return;
+
   players.push(name);
   saveData();
   document.getElementById("playerInput").value = "";
 }
 
 function saveData() {
-  db.ref("tournaments/" + meetId).update({ players, matches, resting, courts: parseInt(document.getElementById("courtsInput").value)||1, timestamp: Date.now() });
+  if (!meetId) return;
+  db.ref("tournaments/" + meetId).update({
+    players: players,
+    matches: matches,
+    resting: resting,
+    courts: parseInt(document.getElementById("courtsInput").value) || 1,
+    timestamp: Date.now()
+  });
 }
 
-function generateMatches() { /* same as last version */ 
+function generateMatches() {
   if (players.length < 4) return alert("Need at least 4 players");
+
   const courts = parseInt(document.getElementById("courtsInput").value) || 1;
   const totalPlaying = courts * 4;
+
   let shuffled = [...players].sort(() => 0.5 - Math.random());
   resting = players.length > totalPlaying ? shuffled.slice(totalPlaying) : [];
   let playing = shuffled.slice(0, totalPlaying);
+
   matches = [];
   for (let i = 0; i < playing.length; i += 4) {
     if (i + 3 >= playing.length) break;
-    matches.push({ teamA: [playing[i], playing[i+1]], teamB: [playing[i+2], playing[i+3]] });
+    matches.push({
+      teamA: [playing[i], playing[i+1]],
+      teamB: [playing[i+2], playing[i+3]]
+    });
   }
+
   saveData();
   renderMatches();
   renderResting();
 }
 
-function renderPlayers() { /* same */ 
+function renderPlayers() {
   const el = document.getElementById("playersList");
-  el.innerHTML = players.map((p,i) => `<div class="flex justify-between bg-gray-50 px-5 py-4 rounded-2xl"><span>${i+1}. ${capitalize(p)}</span></div>`).join("");
+  el.innerHTML = players.map((p, i) => `
+    <div class="flex justify-between bg-gray-50 px-5 py-4 rounded-2xl">
+      <span>${i+1}. ${capitalize(p)}</span>
+    </div>
+  `).join("");
 }
-function updatePlayerCount() { document.getElementById("playerCount").textContent = players.length; }
-function renderResting() { 
-  document.getElementById("restingPlayers").innerHTML = resting.length ? resting.map(capitalize).join(" • ") : "None"; 
+
+function updatePlayerCount() {
+  document.getElementById("playerCount").textContent = players.length;
 }
-function renderMatches() { /* same */ 
+
+function renderResting() {
+  document.getElementById("restingPlayers").innerHTML = 
+    resting.length ? resting.map(capitalize).join(" • ") : "None";
+}
+
+function renderMatches() {
   const el = document.getElementById("matchesContainer");
-  if (!matches.length) return el.innerHTML = `<div class="text-center py-16 text-gray-400">No matches yet</div>`;
-  el.innerHTML = matches.map((m,i) => `
+  if (!matches.length) {
+    el.innerHTML = `<div class="text-center py-16 text-gray-400">No matches yet. Generate a round!</div>`;
+    return;
+  }
+  el.innerHTML = matches.map((m, i) => `
     <div class="match-card">
       <div class="text-right font-medium">\( {capitalize(m.teamA[0])}<br> \){capitalize(m.teamA[1])}</div>
-      <div class="text-center"><div class="text-xs text-gray-400">Court ${i+1}</div><div class="text-2xl font-bold text-gray-700">VS</div></div>
+      <div class="text-center">
+        <div class="text-xs text-gray-400">Court ${i+1}</div>
+        <div class="text-2xl font-bold text-gray-700">VS</div>
+      </div>
       <div class="font-medium">\( {capitalize(m.teamB[0])}<br> \){capitalize(m.teamB[1])}</div>
     </div>
   `).join("");
 }
-function copyLink() { navigator.clipboard.writeText(window.location.href); alert("✅ Link copied!"); }
-function capitalize(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
 
-load();
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href);
+  alert("✅ Link copied to clipboard!");
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Initialize
+loadTournament();
 </script>
 </body>
 </html>
