@@ -122,7 +122,7 @@
     </button>
   </div>
 
-  <!-- Resting Players -->
+  <!-- Resting -->
   <div class="bg-amber-50 border border-amber-200 rounded-3xl p-6">
     <div class="text-amber-700 font-semibold mb-2">Currently Resting</div>
     <div id="restingPlayers" class="text-amber-800 text-lg">None</div>
@@ -152,7 +152,7 @@ let meetId = null;
 let players = [];
 let matches = [];
 
-// Improved Load Function
+// Main load function - called on every page load
 function loadTournament() {
   const params = new URLSearchParams(window.location.search);
   if (params.has("meet")) {
@@ -164,14 +164,16 @@ function loadTournament() {
     return;
   }
 
-  // Load and listen for changes
+  // Clear previous listener to avoid duplicates
+  db.ref("tournaments/" + meetId).off();
+
   db.ref("tournaments/" + meetId).on("value", (snap) => {
     const data = snap.val() || {};
 
     players = data.players || [];
     matches = data.matches || [];
 
-    // Populate form fields
+    // Populate UI
     document.getElementById("tournamentName").value = data.name || "";
     document.getElementById("tournamentLocation").value = data.location || "";
     document.getElementById("tournamentTime").value = data.time || "";
@@ -211,6 +213,7 @@ function createTournament() {
 function addPlayer() {
   let name = document.getElementById("playerInput").value.trim().toLowerCase();
   if (!name || players.includes(name)) return;
+
   players.push(name);
   saveData();
   document.getElementById("playerInput").value = "";
@@ -290,43 +293,3 @@ function renderMatches() {
   matches.forEach((m, i) => {
     const card = document.createElement('div');
     card.className = 'match-card';
-    card.innerHTML = `
-      <div class="team-block">
-        ${capitalize(m.teamA[0])}<br>
-        <span class="text-sm text-gray-500">${capitalize(m.teamA[1])}</span>
-      </div>
-
-      <div class="flex flex-col items-center gap-3">
-        <div class="flex items-center gap-4">
-          <input type="number" class="score-input" value="${m.scoreA || ''}" 
-                 oninput="updateScore(${i}, 'A', this.value)">
-          <span class="text-3xl font-bold text-gray-400">VS</span>
-          <input type="number" class="score-input" value="${m.scoreB || ''}" 
-                 oninput="updateScore(${i}, 'B', this.value)">
-        </div>
-        <div class="text-xs text-gray-400">Court ${i+1}</div>
-      </div>
-
-      <div class="team-block">
-        ${capitalize(m.teamB[0])}<br>
-        <span class="text-sm text-gray-500">${capitalize(m.teamB[1])}</span>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
-
-function copyLink() {
-  navigator.clipboard.writeText(window.location.href);
-  alert("✅ Link copied to clipboard!");
-}
-
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-// Initialize on page load
-loadTournament();
-</script>
-</body>
-</html>
