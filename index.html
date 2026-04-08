@@ -28,15 +28,6 @@
       font-weight: 600;
       line-height: 1.4;
     }
-    .top-tabs {
-      background: linear-gradient(90deg, #1e40af, #3b82f6);
-      padding: 14px; 
-      display: flex; 
-      justify-content: center; 
-      gap: 40px;
-      color: white; 
-      font-weight: 700;
-    }
     .score-input {
       width: 75px;
       height: 55px;
@@ -46,27 +37,22 @@
       border: 2px solid #e5e7eb;
       border-radius: 12px;
     }
+    .leaderboard-table {
+      background: #1e2937;
+      color: #e2e8f0;
+      border-radius: 16px;
+      overflow: hidden;
+    }
   </style>
 </head>
 <body>
 
-<div class="top-tabs">
-  <a href="index.html" class="active">ARENA</a>
-  <a href="leaderboard.html">LEADERBOARD</a>
-</div>
-
-<div class="max-w-4xl mx-auto px-5 py-8 space-y-8">
+<div class="max-w-4xl mx-auto px-5 py-8 space-y-10">
 
   <div class="text-center py-6 space-y-1">
     <div class="text-4xl font-black tracking-widest text-gray-900">PADELPILOT</div>
     <div class="text-blue-600 text-3xl font-bold">Arena</div>
   </div>
-
-  <!-- Manual Load Button -->
-  <button onclick="loadTournament()" 
-          class="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 py-3 rounded-2xl font-medium mb-6">
-    🔄 Load / Refresh Tournament Data
-  </button>
 
   <!-- Tournament Setup -->
   <div class="bg-white border rounded-3xl p-8 shadow-sm space-y-6">
@@ -124,6 +110,28 @@
   <!-- All Rounds -->
   <div id="allRoundsContainer" class="space-y-10"></div>
 
+  <!-- LEADERBOARD -->
+  <div class="mt-12">
+    <h2 class="text-3xl font-bold text-center mb-6">Leaderboard</h2>
+    <div class="leaderboard-table p-6">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b border-gray-700">
+            <th class="text-left py-4">#</th>
+            <th class="text-left py-4">Name</th>
+            <th class="text-center py-4">W</th>
+            <th class="text-center py-4">T</th>
+            <th class="text-center py-4">L</th>
+            <th class="text-center py-4 bg-teal-700">P+</th>
+            <th class="text-center py-4">P-</th>
+            <th class="text-center py-4">+-</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody" class="text-sm"></tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -147,15 +155,9 @@ let allRounds = [];
 
 function loadTournament() {
   const params = new URLSearchParams(window.location.search);
-  if (params.has("meet")) {
-    meetId = params.get("meet");
-    document.getElementById("shareLink").value = window.location.href;
-  }
+  if (params.has("meet")) meetId = params.get("meet");
 
   if (!meetId) return;
-
-  // Remove old listener
-  db.ref("tournaments/" + meetId).off();
 
   db.ref("tournaments/" + meetId).on("value", (snap) => {
     const data = snap.val() || {};
@@ -163,10 +165,12 @@ function loadTournament() {
     allRounds = data.allRounds || [];
 
     document.getElementById("tournamentName").value = data.name || "";
+    document.getElementById("shareLink").value = window.location.href;
 
     renderPlayers();
     renderAllRounds();
     updatePlayerCount();
+    renderLeaderboard();
   });
 }
 
@@ -187,7 +191,7 @@ function createTournament() {
     players,
     allRounds,
     timestamp: Date.now()
-  }).then(() => alert("✅ Tournament saved!"));
+  }).then(() => alert("✅ Saved!"));
 }
 
 function addPlayer() {
@@ -231,6 +235,7 @@ function generate20Rounds() {
 
   saveData();
   renderAllRounds();
+  renderLeaderboard();
   alert("✅ 20 rounds generated!");
 }
 
@@ -240,7 +245,6 @@ function renderAllRounds() {
 
   allRounds.forEach((roundMatches, roundIndex) => {
     let html = `<div class="mb-10"><div class="text-xl font-bold text-blue-600 mb-4">Round ${roundIndex + 1}</div><div class="space-y-4">`;
-    
     roundMatches.forEach((m, i) => {
       html += `
         <div class="match-card">
@@ -265,6 +269,7 @@ function updateScore(roundIndex, matchIndex, side, value) {
   if (!allRounds[roundIndex] || !allRounds[roundIndex][matchIndex]) return;
   allRounds[roundIndex][matchIndex]["score" + side] = value || "";
   saveData();
+  renderLeaderboard();
 }
 
 function renderPlayers() {
@@ -280,6 +285,51 @@ function updatePlayerCount() {
   document.getElementById("playerCount").textContent = players.length;
 }
 
+function renderLeaderboard() {
+  const tbody = document.getElementById("leaderboardBody");
+  tbody.innerHTML = '';
+
+  players.forEach((player, index) => {
+    let wins = 0, ties = 0, losses = 0, pointsFor = 0, pointsAgainst = 0;
+
+    allRounds.forEach(round => {
+      round.forEach(match => {
+        const scoreA = parseFloat(match.scoreA) || 0;
+        const scoreB = parseFloat(match.scoreB) || 0;
+
+        if (match.teamA.includes(player)) {
+          pointsFor += scoreA;
+          pointsAgainst += scoreB;
+          if (scoreA > scoreB) wins++;
+          else if (scoreA === scoreB) ties++;
+          else losses++;
+        }
+        if (match.teamB.includes(player)) {
+          pointsFor += scoreB;
+          pointsAgainst += scoreA;
+          if (scoreB > scoreA) wins++;
+          else if (scoreB === scoreA) ties++;
+          else losses++;
+        }
+      });
+    });
+
+    const row = document.createElement('tr');
+    row.className = "border-b border-gray-700 hover:bg-gray-800";
+    row.innerHTML = `
+      <td class="py-4 px-4">${index + 1}</td>
+      <td class="py-4 px-4 font-medium">${capitalize(player)}</td>
+      <td class="text-center py-4">${wins}</td>
+      <td class="text-center py-4">${ties}</td>
+      <td class="text-center py-4">${losses}</td>
+      <td class="text-center py-4 bg-teal-700 font-bold">${pointsFor}</td>
+      <td class="text-center py-4">${pointsAgainst}</td>
+      <td class="text-center py-4">${pointsFor - pointsAgainst}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
 function copyLink() {
   navigator.clipboard.writeText(window.location.href);
   alert("✅ Link copied!");
@@ -289,7 +339,6 @@ function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-// Initial load
 loadTournament();
 </script>
 </body>
