@@ -51,7 +51,7 @@
 <body>
 
 <div class="top-tabs">
-  <a href="index.html">ARENA</a>
+  <a href="index.html" class="active">ARENA</a>
   <a href="leaderboard.html">LEADERBOARD</a>
 </div>
 
@@ -60,62 +60,83 @@
   <div class="text-center py-6 space-y-1">
     <div class="text-4xl font-black tracking-widest text-gray-900">PADELPILOT</div>
     <div class="text-blue-600 text-3xl font-bold">Arena</div>
-    <div id="roundCounter" class="text-2xl font-bold text-amber-600 mt-2">Round 1</div>
+    <div id="roundCounter" class="text-2xl font-bold text-blue-600 mt-2">Round 1</div>
   </div>
 
   <!-- Tournament Setup -->
   <div class="bg-white border rounded-3xl p-8 shadow-sm space-y-6">
-    <input id="tournamentName" class="w-full p-5 border rounded-2xl text-xl" placeholder="Tournament Name">
-    <div class="grid grid-cols-2 gap-6">
-      <input id="tournamentLocation" class="w-full p-5 border rounded-2xl" placeholder="Location">
-      <input id="tournamentTime" type="time" class="w-full p-5 border rounded-2xl">
+    <div>
+      <label class="text-sm font-semibold text-gray-600 block mb-2">Tournament Name</label>
+      <input id="tournamentName" class="w-full p-5 border rounded-2xl text-xl" placeholder="e.g. Thursday Night Padel">
     </div>
-    <button onclick="createTournament()" class="w-full bg-blue-600 text-white py-5 rounded-3xl font-bold text-xl">
+    <div class="grid grid-cols-2 gap-6">
+      <div>
+        <label class="text-sm font-semibold text-gray-600 block mb-2">Location</label>
+        <input id="tournamentLocation" class="w-full p-5 border rounded-2xl" placeholder="e.g. Al Ain Club">
+      </div>
+      <div>
+        <label class="text-sm font-semibold text-gray-600 block mb-2">Time</label>
+        <input id="tournamentTime" type="time" class="w-full p-5 border rounded-2xl">
+      </div>
+    </div>
+    <button onclick="createTournament()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-3xl font-bold text-xl transition">
       Create / Save Tournament
     </button>
   </div>
 
   <!-- Share -->
-  <div class="bg-white border rounded-3xl p-6">
+  <div class="bg-white border rounded-3xl p-6 shadow-sm">
+    <div class="text-sm text-gray-500 mb-3">Share this link with players</div>
     <div class="flex gap-3">
-      <input id="shareLink" class="flex-1 p-5 border rounded-3xl bg-gray-50" readonly />
-      <button onclick="copyLink()" class="bg-blue-600 text-white px-6 rounded-3xl">Copy</button>
+      <input id="shareLink" class="flex-1 p-5 border rounded-3xl text-sm bg-gray-50 font-mono" readonly />
+      <button onclick="copyLink()" class="bg-blue-600 text-white px-10 rounded-3xl font-semibold">Copy</button>
     </div>
   </div>
 
   <!-- Add Player -->
   <div class="flex gap-3">
-    <input id="playerInput" class="flex-1 p-5 border rounded-3xl" placeholder="Player name">
-    <button onclick="addPlayer()" class="bg-blue-600 text-white px-6 rounded-3xl">Add</button>
+    <input id="playerInput" class="flex-1 p-5 border rounded-3xl text-lg" placeholder="Enter player name">
+    <button onclick="addPlayer()" class="bg-blue-600 text-white px-10 rounded-3xl font-medium">Add Player</button>
   </div>
 
-  <!-- Players -->
-  <div class="bg-white rounded-3xl border p-6">
-    <div>Players • <span id="playerCount">0</span></div>
-    <div id="playersList"></div>
+  <!-- Players List -->
+  <div class="bg-white rounded-3xl border shadow-sm p-6">
+    <div class="font-semibold text-lg mb-4">Players • <span id="playerCount" class="text-blue-600">0</span></div>
+    <div id="playersList" class="space-y-3"></div>
   </div>
 
-  <!-- Courts -->
-  <div class="bg-white border rounded-3xl p-6 flex gap-4">
-    <input id="courtsInput" type="number" value="1" min="1" class="w-full p-5 border rounded-2xl text-center" onchange="saveData()">
-    <button onclick="generateMatches()" class="w-full bg-orange-500 text-white rounded-3xl text-xl">Generate</button>
+  <!-- Courts & Generate -->
+  <div class="bg-white border rounded-3xl p-6 flex items-center gap-6">
+    <div class="flex-1">
+      <label class="text-sm font-semibold text-gray-600 block mb-2">Number of Courts</label>
+      <input id="courtsInput" type="number" min="1" value="1" class="w-full p-5 border rounded-2xl text-center text-xl">
+    </div>
+    <button onclick="generateMatches()" class="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 py-6 rounded-3xl font-bold text-2xl shadow-md">
+      🎲 Generate Round
+    </button>
   </div>
 
-  <!-- Resting -->
-  <div class="bg-amber-50 p-6 rounded-3xl">
-    <div id="restingPlayers">None</div>
+  <!-- Resting Players -->
+  <div class="bg-amber-50 border border-amber-200 rounded-3xl p-6">
+    <div class="text-amber-700 font-semibold mb-2">Currently Resting (This Round)</div>
+    <div id="restingPlayers" class="text-amber-800 text-lg">None</div>
   </div>
 
   <!-- Matches -->
-  <div id="matchesContainer"></div>
+  <div id="matchesContainer" class="space-y-5"></div>
 
 </div>
 
 <script>
+// ============== FIREBASE CONFIG ==============
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  databaseURL: "YOUR_DB_URL"
+  apiKey: "AIzaSyAw5Y0Z8THy2guZ8BK7Q0D5LkHNeP9",
+  authDomain: "padelpilot-b8e47.firebaseapp.com",
+  databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
+  projectId: "padelpilot-b8e47",
+  storageBucket: "padelpilot-b8e47.appspot.com",
+  messagingSenderId: "1047531628612",
+  appId: "1:1047531628612:web:0ee8f8bd27113c41f9c"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -138,29 +159,41 @@ function loadTournament() {
     matches = data.matches || [];
     currentRound = data.currentRound || 1;
 
+    document.getElementById("tournamentName").value = data.name || "";
+    document.getElementById("tournamentLocation").value = data.location || "";
+    document.getElementById("tournamentTime").value = data.time || "";
+    document.getElementById("courtsInput").value = data.courts || 1;
     document.getElementById("shareLink").value = window.location.href;
     document.getElementById("roundCounter").textContent = `Round ${currentRound}`;
 
     renderPlayers();
     renderMatches();
+    updatePlayerCount();
     renderResting();
   });
 }
 
 function createTournament() {
-  const name = document.getElementById("tournamentName").value;
-  meetId = name.replace(/\s+/g, '-').toLowerCase();
+  const name = document.getElementById("tournamentName").value.trim();
+  if (!name) return alert("Please enter a tournament name");
 
-  const url = window.location.origin + "?meet=" + meetId;
-  window.history.pushState({}, "", url);
+  meetId = name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
 
-  db.ref("tournaments/" + meetId).set({
-    players, matches, currentRound, timestamp: Date.now()
-  });
+  const newUrl = window.location.origin + window.location.pathname + "?meet=" + meetId;
+  window.history.pushState({}, "", newUrl);
+  document.getElementById("shareLink").value = newUrl;
+
+  db.ref("tournaments/" + meetId).update({
+    name, location: document.getElementById("tournamentLocation").value.trim(),
+    time: document.getElementById("tournamentTime").value,
+    players, matches, currentRound,
+    courts: parseInt(document.getElementById("courtsInput").value) || 1,
+    timestamp: Date.now()
+  }).then(() => alert("✅ Saved!"));
 }
 
 function addPlayer() {
-  let name = document.getElementById("playerInput").value.toLowerCase();
+  let name = document.getElementById("playerInput").value.trim().toLowerCase();
   if (!name || players.includes(name)) return;
   players.push(name);
   saveData();
@@ -170,83 +203,105 @@ function addPlayer() {
 function saveData() {
   if (!meetId) return;
   db.ref("tournaments/" + meetId).update({
-    players, matches, currentRound, timestamp: Date.now()
+    players, matches, currentRound,
+    courts: parseInt(document.getElementById("courtsInput").value) || 1,
+    timestamp: Date.now()
   });
 }
 
 function generateMatches() {
-  if (players.length < 4) return alert("Need 4 players");
+  if (players.length < 4) return alert("Need at least 4 players");
 
   currentRound++;
+
+  const courts = parseInt(document.getElementById("courtsInput").value) || 1;
+  const maxPlayers = courts * 4;
+
   let shuffled = [...players].sort(() => 0.5 - Math.random());
+  let playing = shuffled.slice(0, maxPlayers);
 
   matches = [];
-  for (let i = 0; i < shuffled.length; i += 4) {
-    if (i + 3 >= shuffled.length) break;
+  for (let i = 0; i < playing.length; i += 4) {
+    if (i + 3 >= playing.length) break;
     matches.push({
-      teamA: [shuffled[i], shuffled[i+1]],
-      teamB: [shuffled[i+2], shuffled[i+3]],
+      teamA: [playing[i], playing[i+1]],
+      teamB: [playing[i+2], playing[i+3]],
       scoreA: "", scoreB: ""
     });
   }
 
+  document.getElementById("roundCounter").textContent = `Round ${currentRound}`;
   saveData();
   renderMatches();
   renderResting();
 }
 
-function renderMatches() {
-  const container = document.getElementById("matchesContainer");
-  container.innerHTML = "";
-
-  matches.forEach((m, i) => {
-    const div = document.createElement("div");
-    div.className = "match-card";
-    div.innerHTML = `
-      <div class="team-block">
-        ${capitalize(m.teamA[0])}<br>${capitalize(m.teamA[1])}
-      </div>
-
-      <div>
-        <input type="number" class="score-input" value="${m.scoreA || ''}" 
-        oninput="updateScore(${i}, 'A', this.value)">
-
-        VS
-
-        <input type="number" class="score-input" value="${m.scoreB || ''}" 
-        oninput="updateScore(${i}, 'B', this.value)">
-      </div>
-
-      <div class="team-block">
-        ${capitalize(m.teamB[0])}<br>${capitalize(m.teamB[1])}
-      </div>
-    `;
-    container.appendChild(div);
-  });
-}
-
-function updateScore(i, side, val) {
-  matches[i]["score" + side] = val;
+function updateScore(index, side, value) {
+  if (!matches[index]) return;
+  matches[index]["score" + side] = value || "";
   saveData();
 }
 
 function renderPlayers() {
+  const el = document.getElementById("playersList");
+  el.innerHTML = players.map((p, i) => `
+    <div class="flex justify-between bg-gray-50 px-5 py-4 rounded-2xl">
+      <span>${i+1}. ${capitalize(p)}</span>
+    </div>
+  `).join("");
+}
+
+function updatePlayerCount() {
   document.getElementById("playerCount").textContent = players.length;
-  document.getElementById("playersList").innerHTML =
-    players.map(p => `<div>${capitalize(p)}</div>`).join("");
 }
 
 function renderResting() {
   const courts = parseInt(document.getElementById("courtsInput").value) || 1;
-  const max = courts * 4;
-  const resting = players.slice(max);
+  const maxPlaying = courts * 4;
+  const resting = players.length > maxPlaying 
+    ? players.slice(maxPlaying).map(capitalize).join(" • ") 
+    : "None";
+  
+  document.getElementById("restingPlayers").innerHTML = resting;
+}
 
-  document.getElementById("restingPlayers").innerHTML =
-    resting.length ? resting.map(capitalize).join(" • ") : "None";
+function renderMatches() {
+  const container = document.getElementById("matchesContainer");
+  container.innerHTML = '';
+
+  if (matches.length === 0) {
+    container.innerHTML = `<div class="text-center py-16 text-gray-400">No matches yet. Generate a round!</div>`;
+    return;
+  }
+
+  matches.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'match-card';
+    card.innerHTML = `
+      <div class="team-block">
+        ${capitalize(m.teamA[0])}<br>
+        <span class="text-sm text-gray-500">${capitalize(m.teamA[1])}</span>
+      </div>
+      <div class="flex flex-col items-center gap-3">
+        <div class="flex items-center gap-4">
+          <input type="number" class="score-input" value="\( {m.scoreA || ''}" oninput="updateScore( \){i}, 'A', this.value)">
+          <span class="text-3xl font-bold text-gray-400">VS</span>
+          <input type="number" class="score-input" value="\( {m.scoreB || ''}" oninput="updateScore( \){i}, 'B', this.value)">
+        </div>
+        <div class="text-xs text-gray-400">Court ${i+1}</div>
+      </div>
+      <div class="team-block">
+        ${capitalize(m.teamB[0])}<br>
+        <span class="text-sm text-gray-500">${capitalize(m.teamB[1])}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
 }
 
 function copyLink() {
   navigator.clipboard.writeText(window.location.href);
+  alert("✅ Link copied!");
 }
 
 function capitalize(str) {
@@ -255,6 +310,5 @@ function capitalize(str) {
 
 loadTournament();
 </script>
-
 </body>
 </html>
