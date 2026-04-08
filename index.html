@@ -14,7 +14,7 @@
     .match-card {
       background: white;
       border-radius: 20px;
-      padding: 28px;
+      padding: 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -24,7 +24,7 @@
     .team-block {
       width: 38%;
       text-align: center;
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 600;
       line-height: 1.4;
     }
@@ -38,10 +38,10 @@
       font-weight: 700;
     }
     .score-input {
-      width: 75px;
-      height: 55px;
+      width: 70px;
+      height: 52px;
       text-align: center;
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
       border: 2px solid #e5e7eb;
       border-radius: 12px;
@@ -111,17 +111,12 @@
       <input id="courtsInput" type="number" min="1" value="1" class="w-full p-5 border rounded-2xl text-center text-xl">
     </div>
     <button onclick="generate20Rounds()" class="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 py-6 rounded-3xl font-bold text-2xl shadow-md">
-      🎲 Generate 20 Rounds
+      Generate
     </button>
   </div>
 
-  <!-- Round Counter -->
-  <div id="roundCounter" class="text-center text-blue-600 text-2xl font-bold py-4">
-    Round 1
-  </div>
-
-  <!-- Matches -->
-  <div id="matchesContainer" class="space-y-5"></div>
+  <!-- All Rounds -->
+  <div id="allRoundsContainer" class="space-y-10"></div>
 
 </div>
 
@@ -143,7 +138,6 @@ const db = firebase.database();
 let meetId = null;
 let players = [];
 let allRounds = [];
-let currentRound = 1;
 
 function loadTournament() {
   const params = new URLSearchParams(window.location.search);
@@ -155,14 +149,12 @@ function loadTournament() {
     const data = snap.val() || {};
     players = data.players || [];
     allRounds = data.allRounds || [];
-    currentRound = data.currentRound || 1;
 
     document.getElementById("tournamentName").value = data.name || "";
     document.getElementById("shareLink").value = window.location.href;
-    document.getElementById("roundCounter").textContent = `Round ${currentRound}`;
 
     renderPlayers();
-    renderCurrentRound();
+    renderAllRounds();
     updatePlayerCount();
   });
 }
@@ -183,8 +175,6 @@ function createTournament() {
     time: document.getElementById("tournamentTime").value,
     players,
     allRounds,
-    currentRound,
-    courts: parseInt(document.getElementById("courtsInput").value) || 1,
     timestamp: Date.now()
   }).then(() => alert("✅ Tournament saved!"));
 }
@@ -202,8 +192,6 @@ function saveData() {
   db.ref("tournaments/" + meetId).update({
     players,
     allRounds,
-    currentRound,
-    courts: parseInt(document.getElementById("courtsInput").value) || 1,
     timestamp: Date.now()
   });
 }
@@ -213,19 +201,18 @@ function generate20Rounds() {
 
   const courts = parseInt(document.getElementById("courtsInput").value) || 1;
   allRounds = [];
-  currentRound = 1;
 
-  let playerList = [...players];
+  let playerPool = [...players];
 
   for (let r = 0; r < 20; r++) {
-    playerList = playerList.sort(() => 0.5 - Math.random());
+    playerPool = playerPool.sort(() => 0.5 - Math.random());
     let roundMatches = [];
 
     for (let i = 0; i < courts * 4; i += 4) {
-      if (i + 3 >= playerList.length) break;
+      if (i + 3 >= playerPool.length) break;
       roundMatches.push({
-        teamA: [playerList[i], playerList[i+1]],
-        teamB: [playerList[i+2], playerList[i+3]],
+        teamA: [playerPool[i], playerPool[i+1]],
+        teamB: [playerPool[i+2], playerPool[i+3]],
         scoreA: "", 
         scoreB: ""
       });
@@ -233,46 +220,47 @@ function generate20Rounds() {
     allRounds.push(roundMatches);
   }
 
-  currentRound = 1;
-  document.getElementById("roundCounter").textContent = `Round ${currentRound}`;
   saveData();
-  renderCurrentRound();
+  renderAllRounds();
   alert("✅ 20 rounds generated successfully!");
 }
 
-function renderCurrentRound() {
-  const container = document.getElementById("matchesContainer");
+function renderAllRounds() {
+  const container = document.getElementById("allRoundsContainer");
   container.innerHTML = '';
 
-  const currentMatches = allRounds[currentRound - 1] || [];
+  allRounds.forEach((roundMatches, roundIndex) => {
+    let roundHTML = `
+      <div class="mb-10">
+        <div class="text-xl font-bold text-blue-600 mb-4">Round ${roundIndex + 1}</div>
+        <div class="space-y-4">`;
 
-  if (currentMatches.length === 0) {
-    container.innerHTML = `<div class="text-center py-16 text-gray-400">No rounds generated yet</div>`;
-    return;
-  }
+    roundMatches.forEach((m, i) => {
+      roundHTML += `
+        <div class="match-card">
+          <div class="team-block">
+            ${capitalize(m.teamA[0])}<br>
+            <span class="text-sm text-gray-500">${capitalize(m.teamA[1])}</span>
+          </div>
+          <div class="flex flex-col items-center gap-3">
+            <div class="flex items-center gap-4">
+              <input type="number" class="score-input" value="${m.scoreA || ''}" 
+                     oninput="updateScore(${roundIndex}, ${i}, 'A', this.value)">
+              <span class="text-3xl font-bold text-gray-400">VS</span>
+              <input type="number" class="score-input" value="${m.scoreB || ''}" 
+                     oninput="updateScore(${roundIndex}, ${i}, 'B', this.value)">
+            </div>
+            <div class="text-xs text-gray-400">Court ${i+1}</div>
+          </div>
+          <div class="team-block">
+            ${capitalize(m.teamB[0])}<br>
+            <span class="text-sm text-gray-500">${capitalize(m.teamB[1])}</span>
+          </div>
+        </div>`;
+    });
 
-  currentMatches.forEach((m, i) => {
-    const card = document.createElement('div');
-    card.className = 'match-card';
-    card.innerHTML = `
-      <div class="team-block">
-        ${capitalize(m.teamA[0])}<br>
-        <span class="text-sm text-gray-500">${capitalize(m.teamA[1])}</span>
-      </div>
-      <div class="flex flex-col items-center gap-3">
-        <div class="flex items-center gap-4">
-          <input type="number" class="score-input" value="\( {m.scoreA || ''}" oninput="updateScore( \){currentRound-1}, ${i}, 'A', this.value)">
-          <span class="text-3xl font-bold text-gray-400">VS</span>
-          <input type="number" class="score-input" value="\( {m.scoreB || ''}" oninput="updateScore( \){currentRound-1}, ${i}, 'B', this.value)">
-        </div>
-        <div class="text-xs text-gray-400">Court ${i+1}</div>
-      </div>
-      <div class="team-block">
-        ${capitalize(m.teamB[0])}<br>
-        <span class="text-sm text-gray-500">${capitalize(m.teamB[1])}</span>
-      </div>
-    `;
-    container.appendChild(card);
+    roundHTML += `</div></div>`;
+    container.innerHTML += roundHTML;
   });
 }
 
