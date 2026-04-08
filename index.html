@@ -62,8 +62,10 @@
     <div class="text-blue-600 text-3xl font-bold">Arena</div>
   </div>
 
-  <button onclick="loadCurrentTournament()" class="w-full bg-gray-200 hover:bg-gray-300 py-3 rounded-2xl font-medium mb-4">
-    🔄 Load Current Tournament
+  <!-- Manual Load Button -->
+  <button onclick="loadTournament()" 
+          class="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 py-3 rounded-2xl font-medium mb-6">
+    🔄 Load / Refresh Tournament Data
   </button>
 
   <!-- Tournament Setup -->
@@ -152,6 +154,9 @@ function loadTournament() {
 
   if (!meetId) return;
 
+  // Remove old listener
+  db.ref("tournaments/" + meetId).off();
+
   db.ref("tournaments/" + meetId).on("value", (snap) => {
     const data = snap.val() || {};
     players = data.players || [];
@@ -163,11 +168,6 @@ function loadTournament() {
     renderAllRounds();
     updatePlayerCount();
   });
-}
-
-function loadCurrentTournament() {
-  loadTournament();
-  alert("✅ Data reloaded from Firebase");
 }
 
 function createTournament() {
@@ -289,6 +289,7 @@ function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+// Initial load
 loadTournament();
 </script>
 </body>
