@@ -21,30 +21,15 @@
       border: 1px solid #e5e7eb;
       box-shadow: 0 4px 15px -2px rgb(0 0 0 / 0.1);
     }
-    .team-block {
-      width: 38%;
-      text-align: center;
-      font-size: 18px;
-      font-weight: 600;
-      line-height: 1.4;
-    }
+    .team-block { width: 38%; text-align: center; font-size: 18px; font-weight: 600; line-height: 1.4; }
     .top-tabs {
       background: linear-gradient(90deg, #1e40af, #3b82f6);
-      padding: 14px; 
-      display: flex; 
-      justify-content: center; 
-      gap: 40px;
-      color: white; 
-      font-weight: 700;
+      padding: 14px; display: flex; justify-content: center; gap: 40px;
+      color: white; font-weight: 700;
     }
     .score-input {
-      width: 75px;
-      height: 55px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: 700;
-      border: 2px solid #e5e7eb;
-      border-radius: 12px;
+      width: 75px; height: 55px; text-align: center; font-size: 22px;
+      font-weight: 700; border: 2px solid #e5e7eb; border-radius: 12px;
     }
   </style>
 </head>
@@ -60,9 +45,10 @@
   <div class="text-center py-6 space-y-1">
     <div class="text-4xl font-black tracking-widest text-gray-900">PADELPILOT</div>
     <div class="text-blue-600 text-3xl font-bold">Arena</div>
+    <div id="roundCounter" class="text-2xl font-bold text-blue-600 mt-3">Round 1</div>
   </div>
 
-  <!-- Tournament Setup + Share + Add Player (same as before) -->
+  <!-- Tournament Setup -->
   <div class="bg-white border rounded-3xl p-8 shadow-sm space-y-6">
     <div>
       <label class="text-sm font-semibold text-gray-600 block mb-2">Tournament Name</label>
@@ -78,7 +64,7 @@
         <input id="tournamentTime" type="time" class="w-full p-5 border rounded-2xl">
       </div>
     </div>
-    <button onclick="createTournament()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-3xl font-bold text-xl transition">
+    <button onclick="createTournament()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-3xl font-bold text-xl">
       Create / Save Tournament
     </button>
   </div>
@@ -98,26 +84,21 @@
     <button onclick="addPlayer()" class="bg-blue-600 text-white px-10 rounded-3xl font-medium">Add Player</button>
   </div>
 
-  <!-- Players List -->
+  <!-- Players -->
   <div class="bg-white rounded-3xl border shadow-sm p-6">
     <div class="font-semibold text-lg mb-4">Players • <span id="playerCount" class="text-blue-600">0</span></div>
     <div id="playersList" class="space-y-3"></div>
   </div>
 
-  <!-- Courts + Generate -->
+  <!-- Courts & Generate -->
   <div class="bg-white border rounded-3xl p-6 flex items-center gap-6">
     <div class="flex-1">
       <label class="text-sm font-semibold text-gray-600 block mb-2">Number of Courts</label>
       <input id="courtsInput" type="number" min="1" value="1" class="w-full p-5 border rounded-2xl text-center text-xl">
     </div>
-    <button onclick="generateRounds()" class="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 py-6 rounded-3xl font-bold text-2xl shadow-md">
-      🎲 Generate Multiple Rounds
+    <button onclick="generateRound()" class="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 py-6 rounded-3xl font-bold text-2xl shadow-md">
+      🎲 Generate Round
     </button>
-  </div>
-
-  <!-- Round Counter -->
-  <div id="roundCounter" class="text-center text-blue-600 text-2xl font-bold py-3">
-    Round 1
   </div>
 
   <!-- Resting -->
@@ -148,13 +129,14 @@ const db = firebase.database();
 
 let meetId = null;
 let players = [];
-let matches = [];        // Current round matches
-let allRounds = [];      // History of all rounds
+let matches = [];
 let currentRound = 1;
 
 function loadTournament() {
   const params = new URLSearchParams(window.location.search);
-  if (params.has("meet")) meetId = params.get("meet");
+  if (params.has("meet")) {
+    meetId = params.get("meet");
+  }
 
   if (!meetId) return;
 
@@ -162,7 +144,6 @@ function loadTournament() {
     const data = snap.val() || {};
     players = data.players || [];
     matches = data.matches || [];
-    allRounds = data.allRounds || [];
     currentRound = data.currentRound || 1;
 
     document.getElementById("tournamentName").value = data.name || "";
@@ -176,37 +157,67 @@ function loadTournament() {
   });
 }
 
-// ... (createTournament, addPlayer, saveData, updateScore, renderPlayers, etc. remain similar)
+function createTournament() {
+  const name = document.getElementById("tournamentName").value.trim();
+  if (!name) return alert("Please enter a tournament name");
 
-function generateRounds() {
+  meetId = name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
+
+  const newUrl = window.location.origin + window.location.pathname + "?meet=" + meetId;
+  window.history.pushState({}, "", newUrl);
+  document.getElementById("shareLink").value = newUrl;
+
+  db.ref("tournaments/" + meetId).update({
+    name,
+    location: document.getElementById("tournamentLocation").value.trim(),
+    time: document.getElementById("tournamentTime").value,
+    players,
+    matches,
+    currentRound,
+    courts: parseInt(document.getElementById("courtsInput").value) || 1,
+    timestamp: Date.now()
+  }).then(() => alert("✅ Tournament saved successfully!"));
+}
+
+function addPlayer() {
+  let name = document.getElementById("playerInput").value.trim().toLowerCase();
+  if (!name || players.includes(name)) return;
+  players.push(name);
+  saveData();
+  document.getElementById("playerInput").value = "";
+}
+
+function saveData() {
+  if (!meetId) return;
+  db.ref("tournaments/" + meetId).update({
+    players,
+    matches,
+    currentRound,
+    courts: parseInt(document.getElementById("courtsInput").value) || 1,
+    timestamp: Date.now()
+  });
+}
+
+function generateRound() {
   if (players.length < 4) return alert("Need at least 4 players");
 
+  currentRound++;
+
   const courts = parseInt(document.getElementById("courtsInput").value) || 1;
-  const roundsToGenerate = 5; // You can change this
+  const maxPlaying = courts * 4;
 
-  allRounds = [];
-  currentRound = 1;
+  let shuffled = [...players].sort(() => 0.5 - Math.random());
+  let playing = shuffled.slice(0, maxPlaying);
 
-  let shuffledPlayers = [...players];
-
-  for (let r = 0; r < roundsToGenerate; r++) {
-    shuffledPlayers.sort(() => 0.5 - Math.random());
-    let roundMatches = [];
-
-    for (let i = 0; i < courts * 4; i += 4) {
-      if (i + 3 >= shuffledPlayers.length) break;
-      roundMatches.push({
-        teamA: [shuffledPlayers[i], shuffledPlayers[i+1]],
-        teamB: [shuffledPlayers[i+2], shuffledPlayers[i+3]],
-        scoreA: "", scoreB: ""
-      });
-    }
-    allRounds.push(roundMatches);
+  matches = [];
+  for (let i = 0; i < playing.length; i += 4) {
+    if (i + 3 >= playing.length) break;
+    matches.push({
+      teamA: [playing[i], playing[i+1]],
+      teamB: [playing[i+2], playing[i+3]],
+      scoreA: "", scoreB: ""
+    });
   }
-
-  // Load first round
-  matches = allRounds[0] || [];
-  currentRound = 1;
 
   document.getElementById("roundCounter").textContent = `Round ${currentRound}`;
   saveData();
@@ -214,17 +225,72 @@ function generateRounds() {
   renderResting();
 }
 
+function updateScore(index, side, value) {
+  if (!matches[index]) return;
+  matches[index]["score" + side] = value || "";
+  saveData();
+}
+
+function renderPlayers() {
+  const el = document.getElementById("playersList");
+  el.innerHTML = players.map((p, i) => `
+    <div class="flex justify-between bg-gray-50 px-5 py-4 rounded-2xl">
+      <span>${i+1}. ${p.charAt(0).toUpperCase() + p.slice(1)}</span>
+    </div>
+  `).join("");
+}
+
+function updatePlayerCount() {
+  document.getElementById("playerCount").textContent = players.length;
+}
+
 function renderResting() {
   const courts = parseInt(document.getElementById("courtsInput").value) || 1;
   const maxPlaying = courts * 4;
   const resting = players.length > maxPlaying 
-    ? players.slice(maxPlaying).map(capitalize).join(" • ") 
+    ? players.slice(maxPlaying).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" • ") 
     : "None";
   document.getElementById("restingPlayers").innerHTML = resting;
 }
 
-// Rest of the functions (renderMatches, updateScore, etc.) are the same as previous version
-// ... (I kept the code short here, but you can use the previous full functions)
+function renderMatches() {
+  const container = document.getElementById("matchesContainer");
+  container.innerHTML = '';
+
+  if (matches.length === 0) {
+    container.innerHTML = `<div class="text-center py-16 text-gray-400">No matches yet. Generate a round!</div>`;
+    return;
+  }
+
+  matches.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'match-card';
+    card.innerHTML = `
+      <div class="team-block">
+        ${m.teamA[0].charAt(0).toUpperCase() + m.teamA[0].slice(1)}<br>
+        <span class="text-sm text-gray-500">${m.teamA[1].charAt(0).toUpperCase() + m.teamA[1].slice(1)}</span>
+      </div>
+      <div class="flex flex-col items-center gap-3">
+        <div class="flex items-center gap-4">
+          <input type="number" class="score-input" value="\( {m.scoreA || ''}" oninput="updateScore( \){i}, 'A', this.value)">
+          <span class="text-3xl font-bold text-gray-400">VS</span>
+          <input type="number" class="score-input" value="\( {m.scoreB || ''}" oninput="updateScore( \){i}, 'B', this.value)">
+        </div>
+        <div class="text-xs text-gray-400">Court ${i+1}</div>
+      </div>
+      <div class="team-block">
+        ${m.teamB[0].charAt(0).toUpperCase() + m.teamB[0].slice(1)}<br>
+        <span class="text-sm text-gray-500">${m.teamB[1].charAt(0).toUpperCase() + m.teamB[1].slice(1)}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href);
+  alert("✅ Link copied!");
+}
 
 loadTournament();
 </script>
