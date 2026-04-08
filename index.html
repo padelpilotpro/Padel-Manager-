@@ -108,7 +108,7 @@
   <div class="bg-white border rounded-3xl p-6 flex items-center gap-6">
     <div class="flex-1">
       <label class="text-sm font-semibold text-gray-600 block mb-2">Number of Courts</label>
-      <input id="courtsInput" type="number" min="1" value="1" class="w-full p-5 border rounded-2xl text-center text-xl">
+      <input id="courtsInput" type="number" min="1" value="1" class="w-full p-5 border rounded-2xl text-center text-xl" onchange="saveData()">
     </div>
     <button onclick="generateMatches()" class="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 py-6 rounded-3xl font-bold text-2xl shadow-md">
       🎲 Generate Round
@@ -188,7 +188,7 @@ function createTournament() {
     players, matches,
     courts: parseInt(document.getElementById("courtsInput").value) || 1,
     timestamp: Date.now()
-  }).then(() => alert("✅ Tournament saved!"));
+  }).then(() => alert("✅ Saved!"));
 }
 
 function addPlayer() {
