@@ -110,15 +110,15 @@
   <!-- All Rounds -->
   <div id="allRoundsContainer" class="space-y-10"></div>
 
-  <!-- LEADERBOARD -->
+  <!-- Leaderboard -->
   <div class="mt-12">
     <h2 class="text-3xl font-bold text-center mb-6">Leaderboard</h2>
     <div class="leaderboard-table p-6">
       <table class="w-full">
         <thead>
           <tr class="border-b border-gray-700">
-            <th class="text-left py-4">#</th>
-            <th class="text-left py-4">Name</th>
+            <th class="text-left py-4 px-4">#</th>
+            <th class="text-left py-4 px-4">Name</th>
             <th class="text-center py-4">W</th>
             <th class="text-center py-4">T</th>
             <th class="text-center py-4">L</th>
@@ -227,7 +227,8 @@ function generate20Rounds() {
       roundMatches.push({
         teamA: [playerPool[i], playerPool[i+1]],
         teamB: [playerPool[i+2], playerPool[i+3]],
-        scoreA: "", scoreB: ""
+        scoreA: "", 
+        scoreB: ""
       });
     }
     allRounds.push(roundMatches);
@@ -245,19 +246,28 @@ function renderAllRounds() {
 
   allRounds.forEach((roundMatches, roundIndex) => {
     let html = `<div class="mb-10"><div class="text-xl font-bold text-blue-600 mb-4">Round ${roundIndex + 1}</div><div class="space-y-4">`;
+    
     roundMatches.forEach((m, i) => {
       html += `
         <div class="match-card">
-          <div class="team-block">\( {capitalize(m.teamA[0])}<br><span class="text-sm text-gray-500"> \){capitalize(m.teamA[1])}</span></div>
+          <div class="team-block">
+            ${capitalize(m.teamA[0])}<br>
+            <span class="text-sm text-gray-500">${capitalize(m.teamA[1])}</span>
+          </div>
           <div class="flex flex-col items-center gap-3">
             <div class="flex items-center gap-4">
-              <input type="number" class="score-input" value="\( {m.scoreA || ''}" oninput="updateScore( \){roundIndex}, ${i}, 'A', this.value)">
+              <input type="number" class="score-input" value="${m.scoreA || ''}" 
+                     oninput="updateScore(${roundIndex}, ${i}, 'A', this.value)">
               <span class="text-3xl font-bold text-gray-400">VS</span>
-              <input type="number" class="score-input" value="\( {m.scoreB || ''}" oninput="updateScore( \){roundIndex}, ${i}, 'B', this.value)">
+              <input type="number" class="score-input" value="${m.scoreB || ''}" 
+                     oninput="updateScore(${roundIndex}, ${i}, 'B', this.value)">
             </div>
             <div class="text-xs text-gray-400">Court ${i+1}</div>
           </div>
-          <div class="team-block">\( {capitalize(m.teamB[0])}<br><span class="text-sm text-gray-500"> \){capitalize(m.teamB[1])}</span></div>
+          <div class="team-block">
+            ${capitalize(m.teamB[0])}<br>
+            <span class="text-sm text-gray-500">${capitalize(m.teamB[1])}</span>
+          </div>
         </div>`;
     });
     html += `</div></div>`;
