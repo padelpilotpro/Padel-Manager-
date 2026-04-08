@@ -257,16 +257,24 @@ function renderAllRounds() {
     roundMatches.forEach((m, i) => {
       html += `
         <div class="match-card">
-          <div class="team-block">\( {capitalize(m.teamA[0])}<br><span class="text-sm text-gray-500"> \){capitalize(m.teamA[1])}</span></div>
+          <div class="team-block">
+            ${capitalize(m.teamA[0])}<br>
+            <span class="text-sm text-gray-500">${capitalize(m.teamA[1])}</span>
+          </div>
           <div class="flex flex-col items-center gap-3">
             <div class="flex items-center gap-4">
-              <input type="number" class="score-input" value="\( {m.scoreA || ''}" oninput="updateScore( \){roundIndex}, ${i}, 'A', this.value)">
+              <input type="number" class="score-input" value="${m.scoreA || ''}" 
+                     oninput="updateScore(${roundIndex}, ${i}, 'A', this.value)">
               <span class="text-3xl font-bold text-gray-400">VS</span>
-              <input type="number" class="score-input" value="\( {m.scoreB || ''}" oninput="updateScore( \){roundIndex}, ${i}, 'B', this.value)">
+              <input type="number" class="score-input" value="${m.scoreB || ''}" 
+                     oninput="updateScore(${roundIndex}, ${i}, 'B', this.value)">
             </div>
             <div class="text-xs text-gray-400">Court ${i+1}</div>
           </div>
-          <div class="team-block">\( {capitalize(m.teamB[0])}<br><span class="text-sm text-gray-500"> \){capitalize(m.teamB[1])}</span></div>
+          <div class="team-block">
+            ${capitalize(m.teamB[0])}<br>
+            <span class="text-sm text-gray-500">${capitalize(m.teamB[1])}</span>
+          </div>
         </div>`;
     });
     html += `</div></div>`;
@@ -286,7 +294,7 @@ function renderPlayers() {
   el.innerHTML = players.map((p, i) => `
     <div class="flex justify-between items-center bg-gray-50 px-5 py-4 rounded-2xl">
       <span>${i+1}. ${capitalize(p)}</span>
-      <button onclick="deletePlayer(${i})" class="text-red-500 hover:text-red-700 text-xl">×</button>
+      <button onclick="deletePlayer(${i})" class="text-red-500 hover:text-red-700 text-2xl leading-none">×</button>
     </div>
   `).join("");
 }
