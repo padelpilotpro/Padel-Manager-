@@ -60,6 +60,7 @@
   <div class="text-center py-6 space-y-1">
     <div class="text-4xl font-black tracking-widest text-gray-900">PADELPILOT</div>
     <div class="text-blue-600 text-3xl font-bold">Arena</div>
+    <div id="roundCounter" class="text-2xl font-bold text-amber-600 mt-2">Round 1</div>
   </div>
 
   <!-- Tournament Setup -->
@@ -108,7 +109,8 @@
   <div class="bg-white border rounded-3xl p-6 flex items-center gap-6">
     <div class="flex-1">
       <label class="text-sm font-semibold text-gray-600 block mb-2">Number of Courts</label>
-      <input id="courtsInput" type="number" min="1" value="1" class="w-full p-5 border rounded-2xl text-center text-xl" onchange="saveData()">
+      <input id="courtsInput" type="number" min="1" value="1" 
+             class="w-full p-5 border rounded-2xl text-center text-xl" onchange="renderResting(); saveData()">
     </div>
     <button onclick="generateMatches()" class="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 py-6 rounded-3xl font-bold text-2xl shadow-md">
       🎲 Generate Round
@@ -144,6 +146,7 @@ const db = firebase.database();
 let meetId = null;
 let players = [];
 let matches = [];
+let currentRound = 1;
 
 function loadTournament() {
   const params = new URLSearchParams(window.location.search);
@@ -158,12 +161,14 @@ function loadTournament() {
     const data = snap.val() || {};
     players = data.players || [];
     matches = data.matches || [];
+    currentRound = data.currentRound || 1;
 
     document.getElementById("tournamentName").value = data.name || "";
     document.getElementById("tournamentLocation").value = data.location || "";
     document.getElementById("tournamentTime").value = data.time || "";
     document.getElementById("courtsInput").value = data.courts || 1;
     document.getElementById("shareLink").value = window.location.href;
+    document.getElementById("roundCounter").textContent = `Round ${currentRound}`;
 
     renderPlayers();
     renderMatches();
@@ -185,7 +190,7 @@ function createTournament() {
   db.ref("tournaments/" + meetId).update({
     name, location: document.getElementById("tournamentLocation").value.trim(),
     time: document.getElementById("tournamentTime").value,
-    players, matches,
+    players, matches, currentRound,
     courts: parseInt(document.getElementById("courtsInput").value) || 1,
     timestamp: Date.now()
   }).then(() => alert("✅ Saved!"));
@@ -202,7 +207,7 @@ function addPlayer() {
 function saveData() {
   if (!meetId) return;
   db.ref("tournaments/" + meetId).update({
-    players, matches,
+    players, matches, currentRound,
     courts: parseInt(document.getElementById("courtsInput").value) || 1,
     timestamp: Date.now()
   });
@@ -210,6 +215,8 @@ function saveData() {
 
 function generateMatches() {
   if (players.length < 4) return alert("Need at least 4 players");
+
+  currentRound++;
 
   const courts = parseInt(document.getElementById("courtsInput").value) || 1;
   const maxPlayers = courts * 4;
@@ -227,6 +234,7 @@ function generateMatches() {
     });
   }
 
+  document.getElementById("roundCounter").textContent = `Round ${currentRound}`;
   saveData();
   renderMatches();
   renderResting();
