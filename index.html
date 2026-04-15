@@ -49,7 +49,7 @@
   </div>
 
   <!-- Developer Reset -->
-  <div class="text-right mb-4">
+  <div class="text-right">
     <button onclick="developerReset()" class="text-red-500 text-sm underline">🔑 Developer Reset</button>
   </div>
 
@@ -150,24 +150,224 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const DEV_PASSWORD = "Ziy@8412";   // ← CHANGE THIS TO YOUR DESIRED PASSWORD
+const DEV_PASSWORD = "yourSecretPassword123";   // ← CHANGE THIS TO YOUR PASSWORD
 
 let meetId = null;
 let players = [];
 let allRounds = [];
 
-// Paste all your other functions here (loadTournament, createTournament, addPlayer, generate20Rounds, renderAllRounds, renderLeaderboard, etc.)
+function loadTournament() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("meet")) meetId = params.get("meet");
+
+  if (!meetId) return;
+
+  db.ref("tournaments/" + meetId).on("value", (snap) => {
+    const data = snap.val() || {};
+    players = data.players || [];
+    allRounds = data.allRounds || [];
+
+    document.getElementById("tournamentName").value = data.name || "";
+    document.getElementById("shareLink").value = window.location.href;
+
+    renderPlayers();
+    renderAllRounds();
+    updatePlayerCount();
+    renderLeaderboard();
+  });
+}
 
 function developerReset() {
-  const pass = prompt("Enter Developer Password to reset:");
+  const pass = prompt("Enter Developer Password:");
   if (pass !== DEV_PASSWORD) {
     alert("❌ Incorrect password.");
     return;
   }
-  if (confirm("⚠️ This will completely delete all data. Are you sure?")) {
+  if (confirm("⚠️ Reset everything?")) {
     db.ref("tournaments/" + meetId).set(null);
-    alert("✅ Everything has been reset.");
+    alert("✅ Full reset done.");
     window.location.reload();
+  }
+}
+
+function createTournament() {
+  const name = document.getElementById("tournamentName").value.trim();
+  if (!name) return alert("Please enter a tournament name");
+
+  meetId = name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
+
+  const newUrl = window.location.origin + window.location.pathname + "?meet=" + meetId;
+  window.history.pushState({}, "", newUrl);
+  document.getElementById("shareLink").value = newUrl;
+
+  db.ref("tournaments/" + meetId).update({
+    name,
+    location: document.getElementById("tournamentLocation").value.trim(),
+    time: document.getElementById("tournamentTime").value,
+    players,
+    allRounds,
+    timestamp: Date.now()
+  }).then(() => alert("✅ Saved!"));
+}
+
+function addPlayer() {
+  let name = document.getElementById("playerInput").value.trim().toLowerCase();
+  if (!name || players.includes(name)) return;
+  players.push(name);
+  saveData();
+  document.getElementById("playerInput").value = "";
+}
+
+function saveData() {
+  if (!meetId) return;
+  db.ref("tournaments/" + meetId).update({
+    players,
+    allRounds,
+    timestamp: Date.now()
+  });
+}
+
+function generate20Rounds() {
+  if (players.length < 4) return alert("Need at least 4 players");
+
+  const courts = parseInt(document.getElementById("courtsInput").value) || 1;
+  allRounds = [];
+
+  let playerPool = [...players];
+
+  for (let r = 0; r < 20; r++) {
+    playerPool = playerPool.sort(() => 0.5 - Math.random());
+    let roundMatches = [];
+    for (let i = 0; i < courts * 4; i += 4) {
+      if (i + 3 >= playerPool.length) break;
+      roundMatches.push({
+        teamA: [playerPool[i], playerPool[i+1]],
+        teamB: [playerPool[i+2], playerPool[i+3]],
+        scoreA: "", scoreB: ""
+      });
+    }
+    allRounds.push(roundMatches);
+  }
+
+  saveData();
+  renderAllRounds();
+  renderLeaderboard();
+  alert("✅ 20 rounds generated!");
+}
+
+function renderAllRounds() {
+  const container = document.getElementById("allRoundsContainer");
+  container.innerHTML = '';
+
+  allRounds.forEach((roundMatches, roundIndex) => {
+    let html = `<div class="mb-10"><div class="text-xl font-bold text-blue-600 mb-4">Round ${roundIndex + 1}</div><div class="space-y-4">`;
+    
+    roundMatches.forEach((m, i) => {
+      html += `
+        <div class="match-card">
+          <div class="team-block">
+            ${capitalize(m.teamA[0])}<br>
+            <span class="text-sm text-gray-500">${capitalize(m.teamA[1])}</span>
+          </div>
+          <div class="flex flex-col items-center gap-3">
+            <div class="flex items-center gap-4">
+              <input type="number" min="0" max="1" class="score-input" value="${m.scoreA || ''}" 
+                     oninput="updateScore(${roundIndex}, ${i}, 'A', this.value)">
+              <span class="text-3xl font-bold text-gray-400">VS</span>
+              <input type="number" min="0" max="1" class="score-input" value="${m.scoreB || ''}" 
+                     oninput="updateScore(${roundIndex}, ${i}, 'B', this.value)">
+            </div>
+            <div class="text-xs text-gray-400">Court ${i+1}</div>
+          </div>
+          <div class="team-block">
+            ${capitalize(m.teamB[0])}<br>
+            <span class="text-sm text-gray-500">${capitalize(m.teamB[1])}</span>
+          </div>
+        </div>`;
+    });
+    html += `</div></div>`;
+    container.innerHTML += html;
+  });
+}
+
+function updateScore(roundIndex, matchIndex, side, value) {
+  value = parseInt(value);
+  if (isNaN(value) || (value !== 0 && value !== 1)) {
+    alert("Only 0 or 1 allowed!");
+    renderAllRounds();
+    return;
+  }
+  if (!allRounds[roundIndex] || !allRounds[roundIndex][matchIndex]) return;
+  allRounds[roundIndex][matchIndex]["score" + side] = value;
+  saveData();
+  renderLeaderboard();
+}
+
+function renderPlayers() {
+  const el = document.getElementById("playersList");
+  el.innerHTML = players.map((p, i) => `
+    <div class="flex justify-between items-center bg-gray-50 px-5 py-4 rounded-2xl">
+      <span>${i+1}. ${capitalize(p)}</span>
+      <button onclick="deletePlayer(${i})" class="text-red-500 hover:text-red-700 text-2xl">×</button>
+    </div>
+  `).join("");
+}
+
+function updatePlayerCount() {
+  document.getElementById("playerCount").textContent = players.length;
+}
+
+function renderLeaderboard() {
+  const tbody = document.getElementById("leaderboardBody");
+  tbody.innerHTML = '';
+
+  players.forEach((player, index) => {
+    let points = 0;
+    allRounds.forEach(round => {
+      round.forEach(match => {
+        const scoreA = parseInt(match.scoreA) || 0;
+        const scoreB = parseInt(match.scoreB) || 0;
+        if (match.teamA.includes(player) && scoreA === 1) points += 3;
+        if (match.teamB.includes(player) && scoreB === 1) points += 3;
+      });
+    });
+
+    const row = document.createElement('tr');
+    row.className = "border-b hover:bg-gray-50";
+    row.innerHTML = `
+      <td class="py-4 px-6">${index + 1}</td>
+      <td class="py-4 px-6 font-medium">${capitalize(player)}</td>
+      <td class="text-center py-4">${Math.floor(points/3)}</td>
+      <td class="text-center py-4">${20 - Math.floor(points/3)}</td>
+      <td class="text-center py-4 font-bold">${points}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function resetTournament() {
+  if (!confirm("Reset entire tournament?")) return;
+  allRounds = [];
+  saveData();
+  renderAllRounds();
+  renderLeaderboard();
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href);
+  alert("✅ Link copied!");
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function deletePlayer(index) {
+  if (confirm(`Delete ${capitalize(players[index])}?`)) {
+    players.splice(index, 1);
+    saveData();
+    renderPlayers();
+    updatePlayerCount();
   }
 }
 
