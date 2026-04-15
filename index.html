@@ -23,25 +23,28 @@ body { background:#f8fafc; font-family:Inter,sans-serif; }
 
 <h1 class="text-3xl font-bold text-center">PADELPILOT ARENA</h1>
 
+<!-- Developer password -->
+<input id="devPassword" type="password" placeholder="Developer Password (for editing tournament)" class="w-full p-4 border rounded-xl">
+
 <!-- Tournament -->
 <input id="tName" placeholder="Tournament Name" class="w-full p-4 border rounded-xl">
 <input id="tLocation" placeholder="Location" class="w-full p-4 border rounded-xl">
 <input id="tTime" type="time" class="w-full p-4 border rounded-xl">
-<button onclick="createTournament()" class="w-full bg-blue-600 text-white p-4 rounded-xl">Create Tournament</button>
+<button onclick="createTournament()" class="w-full bg-blue-600 text-white p-4 rounded-xl">Create / Update Tournament</button>
 
 <!-- Share -->
-<input id="shareLink" readonly class="w-full p-3 border rounded-xl">
+<input id="shareLink" readonly class="w-full p-3 border rounded-xl" placeholder="Share link will appear here">
 
 <!-- Player -->
 <div class="flex gap-2">
-<input id="playerInput" placeholder="Your name" class="flex-1 p-4 border rounded-xl">
-<button onclick="addPlayer()" class="bg-blue-600 text-white px-6 rounded-xl">Add</button>
+  <input id="playerInput" placeholder="Your name" class="flex-1 p-4 border rounded-xl">
+  <button onclick="addPlayer()" class="bg-blue-600 text-white px-6 rounded-xl">Add</button>
 </div>
 
 <div id="players"></div>
 
 <!-- Courts -->
-<input id="courts" type="number" value="1" class="w-full p-4 border rounded-xl">
+<input id="courts" type="number" value="1" min="1" class="w-full p-4 border rounded-xl">
 
 <button onclick="generateRounds()" class="w-full bg-orange-500 text-white p-4 rounded-xl">Generate 20 Rounds</button>
 
@@ -64,33 +67,67 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// Developer password (change to your real secret)
+const DEV_PASSWORD = "Ziy@3922";
+
 let meetId = null;
 let players = [];
 let rounds = [];
+let tournamentCreated = false; // tracks if this tournament already exists (created or loaded)
 
 
-// Create tournament
+// Create / update tournament
 function createTournament(){
- const name = document.getElementById("tName").value;
- if(!name) return alert("Enter name");
+ const name = document.getElementById("tName").value.trim();
+ const locationVal = document.getElementById("tLocation").value.trim();
+ const timeVal = document.getElementById("tTime").value;
+ const devPass = document.getElementById("devPassword").value;
 
- meetId = name.replace(/\s+/g,'-').toLowerCase();
- const url = location.origin + location.pathname + "?meet="+meetId;
- history.pushState({},'',url);
+ if(!name) return alert("Enter tournament name");
 
- document.getElementById("shareLink").value = url;
+ // Generate meetId from name
+ const newMeetId = name.replace(/\s+/g,'-').toLowerCase();
 
+ // If this is the first time (no tournament yet in this session)
+ // OR meetId is different (new tournament), allow creation without password
+ if(!tournamentCreated || meetId !== newMeetId){
+   meetId = newMeetId;
+
+   const url = location.origin + location.pathname + "?meet="+meetId;
+   history.pushState({},'',url);
+   document.getElementById("shareLink").value = url;
+
+   db.ref("tournaments/"+meetId).update({
+    name,
+    location: locationVal,
+    time: timeVal,
+    players,
+    rounds
+   });
+
+   tournamentCreated = true;
+   alert("Tournament created.");
+   return;
+ }
+
+ // If we reach here, a tournament already exists and we are editing it
+ if(devPass !== DEV_PASSWORD){
+   alert("Developer password required to edit existing tournament details.");
+   return;
+ }
+
+ // Update only tournament meta, keep players and rounds intact
  db.ref("tournaments/"+meetId).update({
   name,
-  location: tLocation.value,
-  time: tTime.value,
-  players,
-  rounds
+  location: locationVal,
+  time: timeVal
  });
+
+ alert("Tournament details updated without resetting players or rounds.");
 }
 
 
-// Load
+// Load existing tournament from URL
 function load(){
  const params = new URLSearchParams(location.search);
  if(params.get("meet")){
@@ -101,6 +138,16 @@ function load(){
    players = data.players || [];
    rounds = data.rounds || [];
 
+   // Fill tournament fields if present
+   if(data.name) document.getElementById("tName").value = data.name;
+   if(data.location) document.getElementById("tLocation").value = data.location;
+   if(data.time) document.getElementById("tTime").value = data.time;
+
+   const url = location.origin + location.pathname + "?meet="+meetId;
+   document.getElementById("shareLink").value = url;
+
+   tournamentCreated = true;
+
    renderPlayers();
    renderRounds();
    renderLeaderboard();
@@ -109,25 +156,29 @@ function load(){
 }
 
 
-// Add player (one per device)
+// Add player (one per device, and only once globally)
 function addPlayer(){
  if(!meetId) return alert("Create tournament first");
 
- if(localStorage.getItem("joined")) return alert("You already joined");
+ if(localStorage.getItem("joined")) return alert("You already joined from this device");
 
- const name = playerInput.value.trim().toLowerCase();
- if(!name || players.includes(name)) return;
+ const nameRaw = document.getElementById("playerInput").value.trim();
+ const name = nameRaw.toLowerCase();
+
+ if(!name) return;
+ if(players.includes(name)) return alert("This player name is already added.");
 
  players.push(name);
  localStorage.setItem("joined","true");
 
  save();
- playerInput.value="";
+ document.getElementById("playerInput").value="";
 }
 
 
-// Save
+// Save players and rounds
 function save(){
+ if(!meetId) return;
  db.ref("tournaments/"+meetId).update({
   players,
   rounds
@@ -137,23 +188,33 @@ function save(){
 
 // Render players
 function renderPlayers(){
- playersDiv = document.getElementById("players");
- playersDiv.innerHTML = players.map(p=>`<div>${p}</div>`).join("");
+ const playersDiv = document.getElementById("players");
+ playersDiv.innerHTML = players
+   .map(p=>`<div class="p-2 border-b text-sm">${p}</div>`)
+   .join("");
 }
 
 
-// Generate rounds (smart-ish)
+// Generate 20 rounds with fair-ish resting and mixed teams
 function generateRounds(){
  const courts = parseInt(document.getElementById("courts").value);
- if(players.length < 4) return alert("Need players");
+ if(players.length < 4) return alert("Need at least 4 players");
+ if(!courts || courts < 1) return alert("Enter a valid number of courts");
 
  rounds = [];
  let lastPlayed = {};
 
  for(let r=0;r<20;r++){
+  // fresh pool each round
   let pool = [...players];
 
-  // avoid back-to-back
+  // Shuffle players to mix teams fairly
+  for(let i = pool.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  // Sort so that players who just played last round are later in the pool
   pool.sort((a,b)=>(lastPlayed[a]===r-1?1:0)-(lastPlayed[b]===r-1?1:0));
 
   let matches=[];
@@ -184,14 +245,14 @@ function renderRounds(){
  el.innerHTML="";
 
  rounds.forEach((r,i)=>{
-  let html=`<h3>Round ${i+1}</h3>`;
+  let html=`<h3 class="mt-4 mb-2 font-semibold">Round ${i+1}</h3>`;
   r.forEach((m,j)=>{
    html+=`
-   <div class="match-card">
+   <div class="match-card mb-3">
     <div class="team">${m.A[0]}<br>${m.A[1]}</div>
-    <div>
+    <div class="flex items-center gap-2">
      <input class="score" value="${m.sA}" onchange="score(${i},${j},'A',this.value)">
-     vs
+     <span class="text-gray-500">vs</span>
      <input class="score" value="${m.sB}" onchange="score(${i},${j},'B',this.value)">
     </div>
     <div class="team">${m.B[0]}<br>${m.B[1]}</div>
@@ -202,10 +263,14 @@ function renderRounds(){
 }
 
 
-// Score
+// Score input (only 0 or 1 allowed)
 function score(r,m,side,val){
  val=parseInt(val);
- if(val!==0 && val!==1) return alert("Only 0 or 1");
+ if(val!==0 && val!==1){
+   alert("Only 0 or 1 allowed.\n1 = 3 points, 0 = 0 points.");
+   renderRounds(); // reset invalid input visually
+   return;
+ }
 
  rounds[r][m]["s"+side]=val;
  save();
@@ -234,8 +299,10 @@ function renderLeaderboard(){
 
  let sorted = Object.entries(scores).sort((a,b)=>b[1].pts-a[1].pts);
 
- leaderboard.innerHTML = sorted.map(([name,s],i)=>`
-  <div>${i+1}. ${name} - ${s.pts} pts (${s.w}W ${s.l}L)</div>
+ document.getElementById("leaderboard").innerHTML = sorted.map(([name,s],i)=>`
+  <div class="p-2 border-b text-sm">
+    ${i+1}. <span class="font-semibold">${name}</span> - ${s.pts} pts (${s.w}W ${s.l}L)
+  </div>
  `).join("");
 }
 
