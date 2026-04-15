@@ -32,7 +32,7 @@
       width: 75px;
       height: 55px;
       text-align: center;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 700;
       border: 2px solid #e5e7eb;
       border-radius: 12px;
@@ -78,7 +78,7 @@
     </div>
   </div>
 
-  <!-- Add My Name (Once only) -->
+  <!-- Add Player (Once only) -->
   <div class="flex gap-3">
     <input id="playerInput" class="flex-1 p-5 border rounded-3xl text-lg" placeholder="Enter your name">
     <button onclick="addMyName()" id="addBtn" class="bg-blue-600 text-white px-10 rounded-3xl font-medium">Add My Name</button>
@@ -149,8 +149,8 @@ let meetId = null;
 let players = [];
 let allRounds = [];
 
-// Prevent multiple adds per browser
-const hasAdded = localStorage.getItem("hasAddedName") === "true";
+// Auto-clear after 24 hours
+const AUTO_CLEAR_HOURS = 24;
 
 function loadTournament() {
   const params = new URLSearchParams(window.location.search);
@@ -159,17 +159,21 @@ function loadTournament() {
   if (!meetId) return;
 
   db.ref("tournaments/" + meetId).on("value", (snap) => {
-    const data = snap.val() || {};
+    const data = snap.val();
+    if (!data) return;
+
+    // Auto clear if older than 24 hours
+    if (Date.now() - (data.timestamp || 0) > AUTO_CLEAR_HOURS * 60 * 60 * 1000) {
+      db.ref("tournaments/" + meetId).set(null);
+      alert("This tournament has expired and was reset.");
+      return;
+    }
+
     players = data.players || [];
     allRounds = data.allRounds || [];
 
     document.getElementById("tournamentName").value = data.name || "";
     document.getElementById("shareLink").value = window.location.href;
-
-    if (hasAdded) {
-      document.getElementById("addBtn").disabled = true;
-      document.getElementById("addBtn").textContent = "Added ✓";
-    }
 
     renderPlayers();
     renderAllRounds();
@@ -178,14 +182,37 @@ function loadTournament() {
   });
 }
 
+function createTournament() {
+  const name = document.getElementById("tournamentName").value.trim();
+  if (!name) return alert("Please enter a tournament name");
+
+  meetId = name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
+
+  const newUrl = window.location.origin + window.location.pathname + "?meet=" + meetId;
+  window.history.pushState({}, "", newUrl);
+  document.getElementById("shareLink").value = newUrl;
+
+  db.ref("tournaments/" + meetId).update({
+    name,
+    location: document.getElementById("tournamentLocation").value.trim(),
+    time: document.getElementById("tournamentTime").value,
+    players,
+    allRounds,
+    timestamp: Date.now()
+  }).then(() => alert("✅ Saved!"));
+}
+
 function addMyName() {
-  if (hasAdded) return alert("You already added your name.");
+  if (localStorage.getItem("hasAddedName") === "true") {
+    alert("You have already added your name.");
+    return;
+  }
 
   let name = prompt("Enter your real name:");
   if (!name) return;
 
   name = name.trim().toLowerCase();
-  if (!name || players.includes(name)) return alert("Name already exists or invalid.");
+  if (!name || players.includes(name)) return alert("Name already exists.");
 
   players.push(name);
   saveData();
@@ -194,13 +221,44 @@ function addMyName() {
   document.getElementById("addBtn").textContent = "Added ✓";
 }
 
-function createTournament() { /* same */ }
-function saveData() { /* same */ }
-function generate20Rounds() { /* same */ }
-function renderAllRounds() { /* same */ }
-function updateScore() { /* same with 0/1 validation */ }
-function renderPlayers() { /* same with delete */ }
-function renderLeaderboard() { /* updated for 3 points per win */ }
+function saveData() {
+  if (!meetId) return;
+  db.ref("tournaments/" + meetId).update({
+    players,
+    allRounds,
+    timestamp: Date.now()
+  });
+}
+
+function generate20Rounds() {
+  if (players.length < 4) return alert("Need at least 4 players");
+
+  const courts = parseInt(document.getElementById("courtsInput").value) || 1;
+  allRounds = [];
+
+  let playerPool = [...players];
+
+  for (let r = 0; r < 20; r++) {
+    playerPool = playerPool.sort(() => 0.5 - Math.random());
+    let roundMatches = [];
+    for (let i = 0; i < courts * 4; i += 4) {
+      if (i + 3 >= playerPool.length) break;
+      roundMatches.push({
+        teamA: [playerPool[i], playerPool[i+1]],
+        teamB: [playerPool[i+2], playerPool[i+3]],
+        scoreA: "", scoreB: ""
+      });
+    }
+    allRounds.push(roundMatches);
+  }
+
+  saveData();
+  renderAllRounds();
+  renderLeaderboard();
+  alert("✅ 20 rounds generated!");
+}
+
+// Rest of functions (renderAllRounds, renderPlayers, renderLeaderboard, etc.) are the same as previous working version
 
 loadTournament();
 </script>
