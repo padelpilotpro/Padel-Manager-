@@ -12,53 +12,12 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
   
-  body { 
-    background-color: #ffffff; 
-    color: #1a1a1a; 
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  .glass-card {
-    background: #ffffff;
-    border: 1px solid #f0f0f0;
-    border-radius: 24px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  }
-
-  .match-card {
-    background: #fcfcfc;
-    border: 1px solid #eeeeee;
-    border-radius: 20px;
-    padding: 16px;
-    margin-bottom: 12px;
-  }
-
-  .input-field {
-    background: #f9f9f9;
-    border: 1px solid #e2e2e2;
-    border-radius: 12px;
-    padding: 12px 16px;
-    transition: all 0.3s ease;
-  }
-
-  .btn-primary {
-    background: #1a1a1a;
-    color: white;
-    font-weight: 600;
-  }
-
-  .score-box {
-    width: 50px;
-    height: 45px;
-    text-align: center;
-    font-size: 18px;
-    font-weight: 700;
-    border-radius: 8px;
-    border: 1px solid #d1d5db;
-  }
-
-  .hidden-admin { display: none; }
+  body { background-color: #ffffff; color: #1a1a1a; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+  .glass-card { background: #ffffff; border: 1px solid #f0f0f0; border-radius: 24px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); }
+  .match-card { background: #fcfcfc; border: 1px solid #eeeeee; border-radius: 20px; padding: 16px; margin-bottom: 12px; }
+  .input-field { background: #f9f9f9; border: 1px solid #e2e2e2; border-radius: 12px; padding: 12px 16px; }
+  .score-box { width: 50px; height: 45px; text-align: center; font-size: 18px; font-weight: 700; border-radius: 8px; border: 1px solid #d1d5db; }
+  .admin-only { display: none; }
 </style>
 </head>
 
@@ -68,11 +27,14 @@
 
   <header class="text-center pt-4">
     <h1 class="text-2xl font-extrabold tracking-tight uppercase">PADELPILOT <span class="text-blue-600">ARENA</span></h1>
-    <p class="text-gray-400 text-xs font-bold uppercase tracking-widest">Tournament Hub</p>
+    <p id="displayTournamentName" class="text-gray-400 text-xs font-bold uppercase tracking-widest italic">Hub Status: Active</p>
   </header>
 
-  <section id="adminSection" class="hidden-admin glass-card p-5 space-y-4 border-2 border-blue-50">
-    <h3 class="text-blue-600 font-bold text-sm underline">Admin Controls Active</h3>
+  <section id="adminSection" class="admin-only glass-card p-5 space-y-4 border-2 border-blue-50">
+    <div class="flex justify-between items-center">
+        <h3 class="text-blue-600 font-bold text-xs uppercase underline">Admin Panel</h3>
+        <button onclick="closeAdmin()" class="text-gray-400 text-xs font-bold">Close ✕</button>
+    </div>
     <div class="grid grid-cols-1 gap-3">
       <input id="tName" placeholder="Tournament Name" class="input-field">
       <div class="flex gap-2">
@@ -80,44 +42,51 @@
         <input id="tTime" type="time" class="w-32 input-field">
       </div>
     </div>
-    <button onclick="createTournament()" class="w-full btn-primary p-4 rounded-xl">Initialize / Update Arena</button>
+    <button onclick="createTournament()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold">Update Master Config</button>
     
-    <div class="flex justify-between items-center pt-2">
-       <span class="font-bold text-sm">Courts</span>
-       <input id="courts" type="number" value="1" min="1" class="w-16 text-center font-bold bg-gray-100 p-2 rounded-lg border">
+    <div class="pt-2 border-t mt-4">
+        <p class="text-[10px] font-bold text-red-500 uppercase mb-2">Master Roster (Admin Only)</p>
+        <div id="adminRoster" class="space-y-2"></div>
     </div>
-    <button onclick="generateRounds()" class="w-full bg-orange-500 text-white p-4 rounded-xl font-bold">Generate 20 Rounds</button>
   </section>
 
   <div id="activeTournamentUI" class="space-y-6">
     <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-      <p class="text-[10px] font-bold text-blue-500 uppercase mb-1">Live Tournament Link</p>
+      <p class="text-[10px] font-bold text-blue-500 uppercase mb-1">Invite Players</p>
       <input id="shareLink" readonly class="w-full bg-transparent text-sm text-blue-800 font-medium focus:outline-none cursor-pointer" onclick="this.select(); document.execCommand('copy');">
     </div>
 
     <div class="space-y-3">
       <h2 class="text-lg font-bold flex items-center gap-2">
-        <span class="w-2 h-6 bg-blue-600 rounded-full"></span> Players
+        <span class="w-2 h-6 bg-blue-600 rounded-full"></span> Register Player
       </h2>
       <div class="flex gap-2">
-        <input id="playerInput" placeholder="Join with your name" class="flex-1 input-field">
-        <button onclick="addPlayer()" class="bg-blue-600 text-white px-5 rounded-xl font-bold">Join</button>
+        <input id="playerInput" placeholder="Your Name" class="flex-1 input-field">
+        <button onclick="addPlayer()" class="bg-blue-600 text-white px-5 rounded-xl font-bold">Add</button>
       </div>
       <div id="playersList" class="flex flex-wrap gap-2 pt-2 min-h-[40px]"></div>
+    </div>
+
+    <div class="glass-card p-5 space-y-4 text-center">
+       <div class="flex justify-between items-center mb-2">
+         <span class="font-bold text-sm">Courts Available</span>
+         <input id="courts" type="number" value="1" min="1" class="w-16 text-center font-bold bg-gray-100 p-2 rounded-lg border">
+       </div>
+       <button onclick="generateRounds()" class="w-full bg-orange-500 text-white p-4 rounded-xl font-bold shadow-lg shadow-orange-100 uppercase text-sm">Generate Match Schedule</button>
+       <p class="text-[9px] text-gray-400 font-bold uppercase mt-2">Resets automatically every 24 hours</p>
     </div>
 
     <div id="rounds" class="space-y-8"></div>
 
     <div class="glass-card p-6">
-      <h2 class="text-xl font-bold mb-4 flex items-center gap-2">🏆 Rankings</h2>
+      <h2 class="text-xl font-bold mb-4">🏆 Standings</h2>
       <div id="leaderboard" class="divide-y divide-gray-100"></div>
     </div>
   </div>
 
   <div class="pt-10 text-center">
-    <button onclick="unlockDev()" class="text-[10px] text-gray-300 font-bold uppercase hover:text-gray-500 transition-colors">Developer</button>
+    <button onclick="unlockDev()" class="text-[10px] text-gray-300 font-bold uppercase hover:text-gray-500 transition-colors tracking-widest">Developer</button>
   </div>
-
 </div>
 
 <script>
@@ -137,37 +106,39 @@ let players = [];
 let rounds = [];
 let tournamentCreated = false;
 
-// UI Unlock
 function unlockDev() {
-  const pass = prompt("Enter Developer Password:");
+  const pass = prompt("Enter Admin Password:");
   if(pass === DEV_PASSWORD) {
     document.getElementById('adminSection').style.display = 'block';
-    alert("Admin controls enabled.");
-  } else {
-    alert("Incorrect password.");
-  }
+    renderAdminRoster();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else { alert("Unauthorized."); }
 }
+
+function closeAdmin() { document.getElementById('adminSection').style.display = 'none'; }
 
 function createTournament(){
   const name = document.getElementById("tName").value.trim();
   const locationVal = document.getElementById("tLocation").value.trim();
   const timeVal = document.getElementById("tTime").value;
 
-  if(!name) return alert("Enter tournament name");
+  if(!name) return alert("Enter tournament name.");
   const newMeetId = name.replace(/\s+/g,'-').toLowerCase();
 
   if(!tournamentCreated || meetId !== newMeetId){
     meetId = newMeetId;
     const url = location.origin + location.pathname + "?meet="+meetId;
     history.pushState({},'',url);
-    document.getElementById("shareLink").value = url;
-    db.ref("tournaments/"+meetId).update({ name, location: locationVal, time: timeVal, players, rounds });
+    db.ref("tournaments/"+meetId).update({ 
+        name, location: locationVal, time: timeVal, players, rounds, 
+        createdAt: Date.now() // Timestamp for 24h reset logic
+    });
     tournamentCreated = true;
-    return;
+  } else {
+    db.ref("tournaments/"+meetId).update({ name, location: locationVal, time: timeVal });
   }
-
-  db.ref("tournaments/"+meetId).update({ name, location: locationVal, time: timeVal });
-  alert("Settings updated.");
+  document.getElementById("displayTournamentName").innerText = name;
+  alert("Saved.");
 }
 
 function load(){
@@ -176,24 +147,49 @@ function load(){
     meetId = params.get("meet");
     db.ref("tournaments/"+meetId).on("value", snap=>{
       const data = snap.val() || {};
+      
+      // --- 24 HOUR RESET LOGIC ---
+      if (data.createdAt) {
+          const now = Date.now();
+          const oneDay = 24 * 60 * 60 * 1000;
+          if (now - data.createdAt > oneDay) {
+              // Reset Data
+              players = [];
+              rounds = [];
+              localStorage.removeItem("joined_" + meetId);
+              db.ref("tournaments/"+meetId).update({ 
+                  players: [], 
+                  rounds: [], 
+                  createdAt: Date.now() 
+              });
+              alert("24 Hours have passed. The arena has been reset for today's matches.");
+              return;
+          }
+      }
+      // --- END RESET LOGIC ---
+
       players = data.players || [];
       rounds = data.rounds || [];
-      if(data.name) document.getElementById("tName").value = data.name;
+      if(data.name) {
+          document.getElementById("tName").value = data.name;
+          document.getElementById("displayTournamentName").innerText = data.name;
+      }
       document.getElementById("shareLink").value = window.location.href;
       tournamentCreated = true;
       renderPlayers();
       renderRounds();
       renderLeaderboard();
+      if(document.getElementById('adminSection').style.display === 'block') renderAdminRoster();
     });
   }
 }
 
 function addPlayer(){
-  if(!meetId) return alert("Select or create a tournament first.");
-  if(localStorage.getItem("joined_" + meetId)) return alert("You have already joined this arena.");
+  if(!meetId) return alert("Initialize Arena First.");
+  if(localStorage.getItem("joined_" + meetId)) return alert("You can only add one name.");
+  
   const name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!name) return;
-  if(players.includes(name)) return alert("Name taken.");
+  if(!name || players.includes(name)) return alert("Invalid or duplicate name.");
   
   players.push(name);
   localStorage.setItem("joined_" + meetId, "true");
@@ -201,28 +197,36 @@ function addPlayer(){
   document.getElementById("playerInput").value="";
 }
 
-function save(){
-  if(meetId) db.ref("tournaments/"+meetId).update({ players, rounds });
+function deletePlayer(index) {
+    if(confirm("Remove player?")) { players.splice(index, 1); save(); }
 }
+
+function save(){ if(meetId) db.ref("tournaments/"+meetId).update({ players, rounds }); }
 
 function renderPlayers(){
   const playersDiv = document.getElementById("playersList");
-  if(!players.length) {
-    playersDiv.innerHTML = '<p class="text-xs text-gray-300 italic">No players yet...</p>';
-    return;
-  }
-  playersDiv.innerHTML = players
-    .map(p=>`<span class="bg-gray-50 text-[11px] font-bold px-3 py-1.5 rounded-full border border-gray-100 uppercase tracking-tight">${p}</span>`)
-    .join("");
+  playersDiv.innerHTML = players.length 
+    ? players.map(p=>`<span class="bg-blue-50 text-blue-600 text-[11px] font-bold px-3 py-1.5 rounded-full border border-blue-100 uppercase tracking-tighter">${p}</span>`).join("")
+    : '<p class="text-xs text-gray-300 italic">No players checked in.</p>';
+}
+
+function renderAdminRoster() {
+    const adminRoster = document.getElementById("adminRoster");
+    adminRoster.innerHTML = players.map((p, i) => `
+        <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg border">
+            <span class="text-xs font-bold uppercase">${p}</span>
+            <button onclick="deletePlayer(${i})" class="text-red-500 text-[10px] font-bold underline">DELETE</button>
+        </div>
+    `).join("");
 }
 
 function generateRounds(){
   const courts = parseInt(document.getElementById("courts").value);
-  if(players.length < 4) return alert("Minimum 4 players required.");
-  
+  if(players.length < 4) return alert("Need 4 players.");
+  if(!confirm("Reset current scores and generate new matches?")) return;
+
   rounds = [];
   let lastPlayed = {};
-
   for(let r=0; r<20; r++){
     let pool = [...players];
     for(let i = pool.length - 1; i > 0; i--){
@@ -230,7 +234,6 @@ function generateRounds(){
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     pool.sort((a,b)=>(lastPlayed[a]===r-1?1:0)-(lastPlayed[b]===r-1?1:0));
-
     let matches=[];
     for(let i=0; i<courts; i++){
       if(pool.length < 4) break;
@@ -247,17 +250,17 @@ function renderRounds(){
   const el = document.getElementById("rounds");
   el.innerHTML="";
   rounds.forEach((r,i)=>{
-    let html=`<div class="space-y-3"><h3 class="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Round ${i+1}</h3>`;
+    let html=`<div class="space-y-3"><h3 class="text-[10px] font-black text-gray-300 uppercase tracking-widest">Match Round ${i+1}</h3>`;
     r.forEach((m,j)=>{
       html+=`
       <div class="match-card flex items-center justify-between shadow-sm border border-gray-100">
-        <div class="w-1/3 text-center leading-tight uppercase text-[11px] font-bold text-gray-600">${m.A[0]}<br>${m.A[1]}</div>
+        <div class="w-1/3 text-center leading-tight uppercase text-[10px] font-bold text-gray-500">${m.A[0]}<br>${m.A[1]}</div>
         <div class="flex items-center gap-2">
           <input class="score-box" value="${m.sA}" onchange="score(${i},${j},'A',this.value)">
           <span class="text-[9px] font-black text-gray-200">VS</span>
           <input class="score-box" value="${m.sB}" onchange="score(${i},${j},'B',this.value)">
         </div>
-        <div class="w-1/3 text-center leading-tight uppercase text-[11px] font-bold text-gray-600">${m.B[0]}<br>${m.B[1]}</div>
+        <div class="w-1/3 text-center leading-tight uppercase text-[10px] font-bold text-gray-500">${m.B[0]}<br>${m.B[1]}</div>
       </div>`;
     });
     el.innerHTML += html + `</div>`;
@@ -282,12 +285,12 @@ function renderLeaderboard(){
   document.getElementById("leaderboard").innerHTML = sorted.map(([n,v],i)=>`
     <div class="flex justify-between items-center py-4">
       <div class="flex items-center gap-4">
-        <span class="text-xs font-bold ${i < 3 ? 'text-blue-500' : 'text-gray-300'}">0${i+1}</span>
-        <span class="font-bold text-gray-800 uppercase text-sm tracking-tighter">${n}</span>
+        <span class="text-xs font-bold text-gray-300">#${i+1}</span>
+        <span class="font-bold text-gray-800 uppercase text-sm">${n}</span>
       </div>
       <div class="text-right">
         <span class="text-blue-600 font-black text-lg">${v.pts}</span>
-        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">${v.w}W ${v.l}L</p>
+        <p class="text-[9px] text-gray-400 font-bold uppercase">${v.w}W ${v.l}L</p>
       </div>
     </div>
   `).join("");
