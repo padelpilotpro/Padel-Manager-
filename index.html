@@ -150,28 +150,26 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const DEV_PASSWORD = "yourSecret123";   // ← CHANGE THIS TO YOUR OWN STRONG PASSWORD
+const DEV_PASSWORD = "Ziy@8412";   // ← CHANGE THIS TO YOUR DESIRED PASSWORD
 
 let meetId = null;
 let players = [];
 let allRounds = [];
 
-// Rest of your previous working code (loadTournament, createTournament, addPlayer, generate20Rounds, renderAllRounds, renderLeaderboard, etc.)
+// Paste all your other functions here (loadTournament, createTournament, addPlayer, generate20Rounds, renderAllRounds, renderLeaderboard, etc.)
 
 function developerReset() {
-  const pass = prompt("Enter Developer Password:");
+  const pass = prompt("Enter Developer Password to reset:");
   if (pass !== DEV_PASSWORD) {
     alert("❌ Incorrect password.");
     return;
   }
-  if (confirm("⚠️ Completely reset everything? This cannot be undone.")) {
+  if (confirm("⚠️ This will completely delete all data. Are you sure?")) {
     db.ref("tournaments/" + meetId).set(null);
-    alert("✅ Full reset completed.");
+    alert("✅ Everything has been reset.");
     window.location.reload();
   }
 }
-
-// Paste all your other functions here (addPlayer, saveData, generate20Rounds, render functions, etc.)
 
 loadTournament();
 </script>
