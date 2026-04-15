@@ -31,13 +31,21 @@
 
   <section class="glass-card space-y-4">
     <h3 class="text-slate-800 font-extrabold text-lg">Arena Setup</h3>
-    <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 focus:bg-white transition-all outline-none" placeholder="Tournament Name">
+    <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Tournament Name">
     <div class="grid grid-cols-2 gap-4">
-      <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 focus:bg-white transition-all outline-none" placeholder="Location">
-      <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 focus:bg-white transition-all outline-none">
+      <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Location">
+      <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none">
     </div>
     <button onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition active:scale-95">Update Arena</button>
   </section>
+
+  <div id="shareSection" class="glass-card hidden">
+    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Share with Players</label>
+    <div class="flex gap-2">
+      <input id="shareLink" class="flex-1 p-3 border rounded-xl text-xs bg-slate-50 font-mono text-slate-500 overflow-hidden text-ellipsis" readonly />
+      <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold transition active:bg-blue-700">Copy Link</button>
+    </div>
+  </div>
 
   <div class="space-y-3">
     <div class="flex gap-2">
@@ -67,10 +75,8 @@
   <div id="allRoundsContainer" class="space-y-10"></div>
 
   <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden border-slate-200">
-    <div class="p-6 border-b bg-slate-50/50 flex justify-between items-center">
+    <div class="p-6 border-b bg-slate-50/50">
       <h2 class="text-xl font-black text-slate-800 uppercase tracking-tight">Standings</h2>
-      <button onclick="copyLink()" class="text-blue-600 text-xs font-bold uppercase tracking-widest">Share Arena</button>
-      <input id="shareLink" class="hidden" readonly />
     </div>
     <table class="w-full">
       <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
@@ -95,7 +101,6 @@
 </div>
 
 <script>
-// ============== DATABASE CONFIG ==============
 const firebaseConfig = {
   apiKey: "AiZaSyAKJywAbSKpKHqOs1a-_nQVBuQGkFmF4d4",
   authDomain: "padelpilot-b8e47.firebaseapp.com",
@@ -112,11 +117,11 @@ let players = [];
 let allRounds = [];
 let isAdmin = false;
 
-// --- INITIAL LOAD ---
 function loadArena() {
   const params = new URLSearchParams(location.search);
   if (params.get("meet")) {
     meetId = params.get("meet");
+    document.getElementById("shareSection").classList.remove("hidden");
     db.ref("tournaments/" + meetId).on("value", snap => {
       const data = snap.val() || {};
       
@@ -144,35 +149,30 @@ function loadArena() {
   }
 }
 
-// --- ADMIN / DEV FUNCTIONS ---
 function unlockDev() {
   const p = prompt("Enter Developer Password:");
   if(p === DEV_PASSWORD) {
     isAdmin = true;
     document.getElementById("devIndicator").style.display = "inline-block";
     document.getElementById("adminResetContainer").classList.remove("hidden");
-    renderPlayers(); // Re-render to show delete buttons
-    alert("Edit Mode Active. You can now remove players and add multiple names.");
-  } else { alert("Incorrect."); }
+    renderPlayers();
+    alert("Edit Mode Active.");
+  }
 }
 
 function removePlayer(index) {
   if(!isAdmin) return;
-  if(confirm("Permanently remove this player? Matches will be recalculated.")) {
-    players.splice(index, 1);
-    saveData();
-  }
+  if(confirm("Remove this player?")) { players.splice(index, 1); saveData(); }
 }
 
 function masterReset() {
-  if(confirm("This will WIPE EVERYTHING (Players, Scores, Arena Settings). Continue?")) {
+  if(confirm("Wipe everything?")) {
     db.ref("tournaments/" + meetId).set(null);
     localStorage.clear();
     location.href = location.origin + location.pathname;
   }
 }
 
-// --- CORE LOGIC ---
 function createTournament() {
   const name = document.getElementById("tournamentName").value.trim();
   const loc = document.getElementById("tournamentLocation").value.trim();
@@ -188,10 +188,11 @@ function createTournament() {
       name, location: loc, time: time,
       createdAt: Date.now(), players, rounds: allRounds
     });
+    document.getElementById("shareSection").classList.remove("hidden");
   } else {
     db.ref("tournaments/" + meetId).update({ name, location: loc, time: time });
   }
-  alert("Arena Details Saved.");
+  alert("Arena Saved.");
 }
 
 function addPlayer() {
@@ -207,11 +208,20 @@ function addPlayer() {
   document.getElementById("playerInput").value = "";
 }
 
+function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds }); }
+
+function copyLink() {
+  const el = document.getElementById("shareLink");
+  el.select();
+  document.execCommand('copy');
+  const btn = document.getElementById("copyBtn");
+  btn.innerText = "COPIED!";
+  setTimeout(() => { btn.innerText = "Copy Link"; }, 2000);
+}
+
 function generate20Rounds() {
   const courts = parseInt(document.getElementById("courtsInput").value);
   if(players.length < 4) return alert("Need 4 players.");
-  if(!confirm("Generate matches? This will reset all current scores.")) return;
-
   allRounds = [];
   let lastPlayed = {};
   for(let r=0; r<20; r++) {
@@ -233,9 +243,6 @@ function generate20Rounds() {
   saveData();
 }
 
-function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds }); }
-
-// --- RENDERERS ---
 function renderPlayers() {
   document.getElementById("playerCount").innerText = players.length;
   document.getElementById("playersList").innerHTML = players.map((p, i) => `
@@ -251,11 +258,9 @@ function renderAllRounds() {
   container.innerHTML = "";
   allRounds.forEach((r, i) => {
     let html = `<div class="space-y-4">
-      <div class="flex items-center gap-4">
-        <div class="h-[1px] flex-1 bg-slate-200"></div>
-        <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Round ${i+1}</span>
-        <div class="h-[1px] flex-1 bg-slate-200"></div>
-      </div>`;
+      <div class="flex items-center gap-4"><div class="h-[1px] flex-1 bg-slate-200"></div>
+      <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Round ${i+1}</span>
+      <div class="h-[1px] flex-1 bg-slate-200"></div></div>`;
     r.forEach((m, j) => {
       html += `
         <div class="match-card shadow-sm border-slate-100">
@@ -288,20 +293,11 @@ function renderLeaderboard() {
   }));
   let sorted = Object.entries(s).sort((a,b) => b[1].pts - a[1].pts);
   document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `
-    <tr>
-      <td class="py-5 px-6 font-black text-slate-300 text-xs">#0${i+1}</td>
-      <td class="py-5 font-bold uppercase text-xs">${n}</td>
-      <td class="py-5 text-center text-[10px] font-bold text-slate-400">${v.w}W - ${v.l}L</td>
-      <td class="py-5 text-right px-6 font-black text-blue-600">${v.pts}</td>
-    </tr>
+    <tr><td class="py-5 px-6 font-black text-slate-300 text-xs">#0${i+1}</td>
+    <td class="py-5 font-bold uppercase text-xs">${n}</td>
+    <td class="py-5 text-center text-[10px] font-bold text-slate-400">${v.w}W - ${v.l}L</td>
+    <td class="py-5 text-right px-6 font-black text-blue-600">${v.pts}</td></tr>
   `).join("");
-}
-
-function copyLink() {
-  const el = document.getElementById("shareLink");
-  el.select();
-  document.execCommand('copy');
-  alert("Invite link copied!");
 }
 
 loadArena();
