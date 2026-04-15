@@ -48,6 +48,11 @@
     <div class="text-blue-600 text-3xl font-bold">Arena</div>
   </div>
 
+  <!-- Developer Reset -->
+  <div class="text-right mb-4">
+    <button onclick="developerReset()" class="text-red-500 text-sm underline">🔑 Developer Reset</button>
+  </div>
+
   <!-- Tournament Setup -->
   <div class="bg-white border rounded-3xl p-8 shadow-sm space-y-6">
     <div>
@@ -78,10 +83,10 @@
     </div>
   </div>
 
-  <!-- Add Player (Once only) -->
+  <!-- Add Player -->
   <div class="flex gap-3">
-    <input id="playerInput" class="flex-1 p-5 border rounded-3xl text-lg" placeholder="Enter your name">
-    <button onclick="addMyName()" id="addBtn" class="bg-blue-600 text-white px-10 rounded-3xl font-medium">Add My Name</button>
+    <input id="playerInput" class="flex-1 p-5 border rounded-3xl text-lg" placeholder="Enter player name">
+    <button onclick="addPlayer()" class="bg-blue-600 text-white px-10 rounded-3xl font-medium">Add Player</button>
   </div>
 
   <!-- Players List -->
@@ -145,120 +150,28 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+const DEV_PASSWORD = "yourSecret123";   // ← CHANGE THIS TO YOUR OWN STRONG PASSWORD
+
 let meetId = null;
 let players = [];
 let allRounds = [];
 
-// Auto-clear after 24 hours
-const AUTO_CLEAR_HOURS = 24;
+// Rest of your previous working code (loadTournament, createTournament, addPlayer, generate20Rounds, renderAllRounds, renderLeaderboard, etc.)
 
-function loadTournament() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.has("meet")) meetId = params.get("meet");
-
-  if (!meetId) return;
-
-  db.ref("tournaments/" + meetId).on("value", (snap) => {
-    const data = snap.val();
-    if (!data) return;
-
-    // Auto clear if older than 24 hours
-    if (Date.now() - (data.timestamp || 0) > AUTO_CLEAR_HOURS * 60 * 60 * 1000) {
-      db.ref("tournaments/" + meetId).set(null);
-      alert("This tournament has expired and was reset.");
-      return;
-    }
-
-    players = data.players || [];
-    allRounds = data.allRounds || [];
-
-    document.getElementById("tournamentName").value = data.name || "";
-    document.getElementById("shareLink").value = window.location.href;
-
-    renderPlayers();
-    renderAllRounds();
-    updatePlayerCount();
-    renderLeaderboard();
-  });
-}
-
-function createTournament() {
-  const name = document.getElementById("tournamentName").value.trim();
-  if (!name) return alert("Please enter a tournament name");
-
-  meetId = name.replace(/\s+/g, '-').toLowerCase().replace(/[^a-z0-9-]/g, '');
-
-  const newUrl = window.location.origin + window.location.pathname + "?meet=" + meetId;
-  window.history.pushState({}, "", newUrl);
-  document.getElementById("shareLink").value = newUrl;
-
-  db.ref("tournaments/" + meetId).update({
-    name,
-    location: document.getElementById("tournamentLocation").value.trim(),
-    time: document.getElementById("tournamentTime").value,
-    players,
-    allRounds,
-    timestamp: Date.now()
-  }).then(() => alert("✅ Saved!"));
-}
-
-function addMyName() {
-  if (localStorage.getItem("hasAddedName") === "true") {
-    alert("You have already added your name.");
+function developerReset() {
+  const pass = prompt("Enter Developer Password:");
+  if (pass !== DEV_PASSWORD) {
+    alert("❌ Incorrect password.");
     return;
   }
-
-  let name = prompt("Enter your real name:");
-  if (!name) return;
-
-  name = name.trim().toLowerCase();
-  if (!name || players.includes(name)) return alert("Name already exists.");
-
-  players.push(name);
-  saveData();
-  localStorage.setItem("hasAddedName", "true");
-  document.getElementById("addBtn").disabled = true;
-  document.getElementById("addBtn").textContent = "Added ✓";
-}
-
-function saveData() {
-  if (!meetId) return;
-  db.ref("tournaments/" + meetId).update({
-    players,
-    allRounds,
-    timestamp: Date.now()
-  });
-}
-
-function generate20Rounds() {
-  if (players.length < 4) return alert("Need at least 4 players");
-
-  const courts = parseInt(document.getElementById("courtsInput").value) || 1;
-  allRounds = [];
-
-  let playerPool = [...players];
-
-  for (let r = 0; r < 20; r++) {
-    playerPool = playerPool.sort(() => 0.5 - Math.random());
-    let roundMatches = [];
-    for (let i = 0; i < courts * 4; i += 4) {
-      if (i + 3 >= playerPool.length) break;
-      roundMatches.push({
-        teamA: [playerPool[i], playerPool[i+1]],
-        teamB: [playerPool[i+2], playerPool[i+3]],
-        scoreA: "", scoreB: ""
-      });
-    }
-    allRounds.push(roundMatches);
+  if (confirm("⚠️ Completely reset everything? This cannot be undone.")) {
+    db.ref("tournaments/" + meetId).set(null);
+    alert("✅ Full reset completed.");
+    window.location.reload();
   }
-
-  saveData();
-  renderAllRounds();
-  renderLeaderboard();
-  alert("✅ 20 rounds generated!");
 }
 
-// Rest of functions (renderAllRounds, renderPlayers, renderLeaderboard, etc.) are the same as previous working version
+// Paste all your other functions here (addPlayer, saveData, generate20Rounds, render functions, etc.)
 
 loadTournament();
 </script>
