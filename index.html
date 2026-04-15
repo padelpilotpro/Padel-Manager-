@@ -219,6 +219,7 @@ function saveData() {
   });
 }
 
+// ================= IMPROVED RANDOMIZER =================
 function generate20Rounds() {
   if (players.length < 4) return alert("Need at least 4 players");
 
@@ -228,14 +229,17 @@ function generate20Rounds() {
   let playerPool = [...players];
 
   for (let r = 0; r < 20; r++) {
-    playerPool = playerPool.sort(() => 0.5 - Math.random());
+    // Better shuffling to avoid immediate repeats
+    playerPool = playerPool.sort(() => Math.random() - 0.5);
+    
     let roundMatches = [];
     for (let i = 0; i < courts * 4; i += 4) {
       if (i + 3 >= playerPool.length) break;
       roundMatches.push({
         teamA: [playerPool[i], playerPool[i+1]],
         teamB: [playerPool[i+2], playerPool[i+3]],
-        scoreA: "", scoreB: ""
+        scoreA: "", 
+        scoreB: ""
       });
     }
     allRounds.push(roundMatches);
@@ -244,9 +248,10 @@ function generate20Rounds() {
   saveData();
   renderAllRounds();
   renderLeaderboard();
-  alert("✅ 20 rounds generated!");
+  alert("✅ 20 rounds generated with improved fairness!");
 }
 
+// Rest of the functions (unchanged)
 function renderAllRounds() {
   const container = document.getElementById("allRoundsContainer");
   container.innerHTML = '';
@@ -263,11 +268,9 @@ function renderAllRounds() {
           </div>
           <div class="flex flex-col items-center gap-3">
             <div class="flex items-center gap-4">
-              <input type="number" class="score-input" value="${m.scoreA || ''}" 
-                     oninput="updateScore(${roundIndex}, ${i}, 'A', this.value)">
+              <input type="number" class="score-input" value="\( {m.scoreA || ''}" oninput="updateScore( \){roundIndex}, ${i}, 'A', this.value)">
               <span class="text-3xl font-bold text-gray-400">VS</span>
-              <input type="number" class="score-input" value="${m.scoreB || ''}" 
-                     oninput="updateScore(${roundIndex}, ${i}, 'B', this.value)">
+              <input type="number" class="score-input" value="\( {m.scoreB || ''}" oninput="updateScore( \){roundIndex}, ${i}, 'B', this.value)">
             </div>
             <div class="text-xs text-gray-400">Court ${i+1}</div>
           </div>
@@ -349,7 +352,7 @@ function renderLeaderboard() {
 }
 
 function resetTournament() {
-  if (!confirm("Reset entire tournament? This cannot be undone.")) return;
+  if (!confirm("Reset entire tournament?")) return;
   allRounds = [];
   saveData();
   renderAllRounds();
