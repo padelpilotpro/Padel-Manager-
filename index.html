@@ -35,27 +35,25 @@
       <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Location">
       <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none">
     </div>
-    <button id="updateBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition active:scale-95">Update Arena</button>
+    <button id="updateBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition active:scale-95">Save & Lock Details</button>
   </section>
 
   <div id="shareSection" class="glass-card hidden">
-    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Share with Players</label>
+    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Invite Players</label>
     <div class="flex gap-2">
       <input id="shareLink" class="flex-1 p-3 border rounded-xl text-xs bg-slate-50 font-mono text-slate-500 overflow-hidden text-ellipsis" readonly />
-      <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold transition">Copy Link</button>
+      <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold">Copy Link</button>
     </div>
   </div>
 
   <div class="space-y-3">
     <div class="flex gap-2">
-      <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg shadow-sm outline-none focus:ring-2 ring-blue-100" placeholder="Enter Player Name">
+      <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg shadow-sm outline-none focus:ring-2 ring-blue-100" placeholder="Your Name">
       <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold shadow-lg shadow-blue-100 transition active:scale-95">Join</button>
     </div>
-    
     <div class="glass-card">
       <div class="font-bold text-xs text-slate-400 uppercase tracking-tighter mb-4 flex justify-between items-center">
-        Current Roster 
-        <span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-md"><span id="playerCount">0</span> Players</span>
+        Live Roster <span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-md"><span id="playerCount">0</span> Players</span>
       </div>
       <div id="playersList" class="flex flex-wrap gap-2"></div>
     </div>
@@ -72,9 +70,8 @@
   </div>
 
   <div id="allRoundsContainer" class="space-y-10"></div>
-
-  <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden border-slate-200">
-    <div class="p-6 border-b bg-slate-50/50"><h2 class="text-xl font-black text-slate-800 uppercase tracking-tight">Standings</h2></div>
+  <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden">
+    <div class="p-6 border-b bg-slate-50/50"><h2 class="text-xl font-black text-slate-800 uppercase">Standings</h2></div>
     <table class="w-full">
       <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
         <tr><th class="py-4 px-6 text-left">Rank</th><th class="py-4 text-left">Player</th><th class="py-4 text-center">W-L</th><th class="py-4 text-right px-6">Points</th></tr>
@@ -86,26 +83,26 @@
   <div class="text-center py-12 space-y-4">
     <button onclick="unlockDev()" class="text-[10px] text-slate-300 font-bold uppercase tracking-[0.4em] hover:text-slate-500">Developer Settings</button>
     <div id="adminResetContainer" class="hidden">
-        <button onclick="masterReset()" class="text-[10px] text-red-400 font-bold uppercase border border-red-100 px-4 py-2 rounded-full hover:bg-red-50">Master Reset</button>
+        <button onclick="masterReset()" class="text-[10px] text-red-400 font-bold uppercase border border-red-100 px-4 py-2 rounded-full hover:bg-red-50">Full Reset Arena</button>
     </div>
   </div>
 </div>
 
 <script>
+// FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AiZaSyAKJywAbSKpKHqOs1a-_nQVBuQGkFmF4d4",
   authDomain: "padelpilot-b8e47.firebaseapp.com",
   databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
   projectId: "padelpilot-b8e47"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const DEV_PASSWORD = "padel-dev-123";
 
 let meetId = null, players = [], allRounds = [], registeredIPs = [], isAdmin = false, userIP = "";
 
-// Fetch User IP
+// Fetch IP for Lockdown
 fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => userIP = d.ip);
 
 function loadArena() {
@@ -115,29 +112,18 @@ function loadArena() {
     document.getElementById("shareSection").classList.remove("hidden");
     db.ref("tournaments/" + meetId).on("value", snap => {
       const data = snap.val() || {};
-      
       if (data.createdAt && (Date.now() - data.createdAt > 24 * 60 * 60 * 1000)) {
-        db.ref("tournaments/" + meetId).set(null);
-        location.reload(); return;
+        db.ref("tournaments/" + meetId).set(null); location.reload(); return;
       }
-
       players = data.players || [];
       allRounds = data.rounds || [];
       registeredIPs = data.registeredIPs || [];
       
-      if(data.name) {
+      if(data.name && !isAdmin) {
         document.getElementById("tournamentName").value = data.name;
         document.getElementById("tournamentLocation").value = data.location || "";
         document.getElementById("tournamentTime").value = data.time || "";
-        
-        // --- LOCKDOWN LOGIC ---
-        document.getElementById("tournamentLocation").readOnly = true;
-        document.getElementById("tournamentLocation").classList.add("locked-input");
-        document.getElementById("tournamentTime").readOnly = true;
-        document.getElementById("tournamentTime").classList.add("locked-input");
-        document.getElementById("updateBtn").innerText = "Arena Details Locked";
-        document.getElementById("updateBtn").classList.replace("bg-slate-900", "bg-slate-300");
-        document.getElementById("updateBtn").disabled = true;
+        lockInputs(true);
       }
       document.getElementById("shareLink").value = window.location.href;
       renderPlayers(); renderAllRounds(); renderLeaderboard();
@@ -145,12 +131,28 @@ function loadArena() {
   }
 }
 
+function lockInputs(lock) {
+  const fields = ["tournamentLocation", "tournamentTime"];
+  fields.forEach(f => {
+    const el = document.getElementById(f);
+    el.readOnly = lock;
+    lock ? el.classList.add("locked-input") : el.classList.remove("locked-input");
+  });
+  const btn = document.getElementById("updateBtn");
+  btn.disabled = lock;
+  btn.innerText = lock ? "Details Locked" : "Update Arena Details";
+  btn.style.opacity = lock ? "0.5" : "1";
+}
+
 function unlockDev() {
-  if(prompt("Password:") === DEV_PASSWORD) {
+  if(prompt("Enter Dev Password:") === DEV_PASSWORD) {
     isAdmin = true;
     document.getElementById("devIndicator").classList.remove("hidden");
     document.getElementById("adminResetContainer").classList.remove("hidden");
+    lockInputs(false);
+    document.getElementById("updateBtn").innerText = "Update Arena (Admin Mode)";
     renderPlayers();
+    alert("Admin Mode Active: All locks removed.");
   }
 }
 
@@ -158,7 +160,7 @@ function createTournament() {
   const name = document.getElementById("tournamentName").value.trim();
   const loc = document.getElementById("tournamentLocation").value.trim();
   const time = document.getElementById("tournamentTime").value;
-  if(!name || !loc || !time) return alert("Fill all fields to start.");
+  if(!name || !loc || !time) return alert("Complete all details.");
   
   meetId = name.replace(/\s+/g,'-').toLowerCase();
   history.pushState({}, '', "?meet=" + meetId);
@@ -169,10 +171,10 @@ function createTournament() {
 
 function addPlayer() {
   if(!meetId) return alert("Setup arena first.");
-  if(!isAdmin && registeredIPs.includes(userIP)) return alert("Access Denied: Device already registered.");
+  if(!isAdmin && registeredIPs.includes(userIP)) return alert("Access Denied: One player per device.");
   
   const name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!name || players.includes(name)) return alert("Unique name required.");
+  if(!name || players.includes(name)) return alert("Enter a unique name.");
   
   players.push(name);
   if(!isAdmin) registeredIPs.push(userIP);
@@ -180,38 +182,23 @@ function addPlayer() {
   document.getElementById("playerInput").value = "";
 }
 
-function removePlayer(i) {
-  if(isAdmin && confirm("Remove?")) { players.splice(i,1); saveData(); }
-}
-
-function masterReset() {
-  if(confirm("DANGER: This wipes EVERYTHING and unlocks inputs.")) {
-    db.ref("tournaments/" + meetId).set(null);
-    location.href = location.origin + location.pathname;
-  }
-}
-
-function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds }); }
-
-function copyLink() {
-  const el = document.getElementById("shareLink");
-  el.select(); document.execCommand('copy');
-  const btn = document.getElementById("copyBtn");
-  btn.innerText = "COPIED!";
-  setTimeout(() => btn.innerText = "Copy Link", 2000);
-}
-
-// Same generate/render functions from before...
 function generate20Rounds() {
-  const courts = parseInt(document.getElementById("courtsInput").value);
-  if(players.length < 4) return alert("Need 4 players.");
+  const setTime = document.getElementById("tournamentTime").value;
+  if (!isAdmin && setTime) {
+    const now = new Date();
+    const [h, m] = setTime.split(':');
+    const tDate = new Date(); tDate.setHours(h, m, 0);
+    if (now < tDate) return alert("Generation opens at " + setTime);
+  }
+
+  if (players.length < 4) return alert("Need 4 players.");
   allRounds = []; let lastPlayed = {};
   for(let r=0; r<20; r++) {
     let pool = [...players];
     for(let i=pool.length-1; i>0; i--){ let j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
     pool.sort((a,b)=>(lastPlayed[a]===r-1?1:0)-(lastPlayed[b]===r-1?1:0));
     let matches=[];
-    for(let c=0; c<courts; c++) {
+    for(let c=0; c<parseInt(document.getElementById("courtsInput").value); c++) {
       if(pool.length<4) break;
       let p1=pool.shift(),p2=pool.shift(),p3=pool.shift(),p4=pool.shift();
       matches.push({tA:[p1,p2],tB:[p3,p4],sA:"",sB:""}); [p1,p2,p3,p4].forEach(p=>lastPlayed[p]=r);
@@ -219,6 +206,14 @@ function generate20Rounds() {
     allRounds.push(matches);
   }
   saveData();
+}
+
+function removePlayer(i) { if(isAdmin && confirm("Remove?")) { players.splice(i,1); saveData(); } }
+function masterReset() { if(confirm("Wipe arena?")) { db.ref("tournaments/" + meetId).set(null); location.href = location.origin + location.pathname; } }
+function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds }); }
+function copyLink() {
+  const el = document.getElementById("shareLink"); el.select(); document.execCommand('copy');
+  document.getElementById("copyBtn").innerText = "COPIED!"; setTimeout(() => document.getElementById("copyBtn").innerText = "Copy Link", 2000);
 }
 
 function renderPlayers() {
