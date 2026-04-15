@@ -24,7 +24,6 @@
     border: 1px solid #f0f0f0;
     border-radius: 24px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-    transition: transform 0.2s ease;
   }
 
   .match-card {
@@ -43,21 +42,11 @@
     transition: all 0.3s ease;
   }
 
-  .input-field:focus {
-    outline: none;
-    border-color: #2563eb;
-    background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-  }
-
   .btn-primary {
     background: #1a1a1a;
     color: white;
     font-weight: 600;
-    transition: opacity 0.2s;
   }
-
-  .btn-primary:active { opacity: 0.8; }
 
   .score-box {
     width: 50px;
@@ -69,25 +58,21 @@
     border: 1px solid #d1d5db;
   }
 
-  .team-label { font-size: 0.9rem; font-weight: 600; color: #4b5563; }
+  .hidden-admin { display: none; }
 </style>
 </head>
 
-<body class="pb-20">
+<body class="pb-24">
 
 <div class="max-w-md mx-auto p-5 space-y-6">
 
   <header class="text-center pt-4">
-    <h1 class="text-2xl font-extrabold tracking-tight">PADELPILOT <span class="text-blue-600">ARENA</span></h1>
-    <p class="text-gray-400 text-sm">Tournament Management Hub</p>
+    <h1 class="text-2xl font-extrabold tracking-tight uppercase">PADELPILOT <span class="text-blue-600">ARENA</span></h1>
+    <p class="text-gray-400 text-xs font-bold uppercase tracking-widest">Tournament Hub</p>
   </header>
 
-  <section class="glass-card p-5 space-y-4">
-    <div class="space-y-2">
-      <label class="text-xs font-bold uppercase text-gray-400 ml-1">Admin Access</label>
-      <input id="devPassword" type="password" placeholder="Developer Password" class="w-full input-field">
-    </div>
-
+  <section id="adminSection" class="hidden-admin glass-card p-5 space-y-4 border-2 border-blue-50">
+    <h3 class="text-blue-600 font-bold text-sm underline">Admin Controls Active</h3>
     <div class="grid grid-cols-1 gap-3">
       <input id="tName" placeholder="Tournament Name" class="input-field">
       <div class="flex gap-2">
@@ -95,47 +80,47 @@
         <input id="tTime" type="time" class="w-32 input-field">
       </div>
     </div>
+    <button onclick="createTournament()" class="w-full btn-primary p-4 rounded-xl">Initialize / Update Arena</button>
     
-    <button onclick="createTournament()" class="w-full btn-primary p-4 rounded-xl shadow-lg">Initialize Arena</button>
+    <div class="flex justify-between items-center pt-2">
+       <span class="font-bold text-sm">Courts</span>
+       <input id="courts" type="number" value="1" min="1" class="w-16 text-center font-bold bg-gray-100 p-2 rounded-lg border">
+    </div>
+    <button onclick="generateRounds()" class="w-full bg-orange-500 text-white p-4 rounded-xl font-bold">Generate 20 Rounds</button>
   </section>
 
   <div id="activeTournamentUI" class="space-y-6">
     <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-      <p class="text-[10px] font-bold text-blue-500 uppercase mb-1">Shareable Tournament Link</p>
-      <input id="shareLink" readonly class="w-full bg-transparent text-sm text-blue-800 font-medium focus:outline-none cursor-pointer">
+      <p class="text-[10px] font-bold text-blue-500 uppercase mb-1">Live Tournament Link</p>
+      <input id="shareLink" readonly class="w-full bg-transparent text-sm text-blue-800 font-medium focus:outline-none cursor-pointer" onclick="this.select(); document.execCommand('copy');">
     </div>
 
     <div class="space-y-3">
       <h2 class="text-lg font-bold flex items-center gap-2">
-        <span class="w-2 h-6 bg-blue-600 rounded-full"></span> Roster
+        <span class="w-2 h-6 bg-blue-600 rounded-full"></span> Players
       </h2>
       <div class="flex gap-2">
-        <input id="playerInput" placeholder="Player Name" class="flex-1 input-field">
-        <button onclick="addPlayer()" class="bg-blue-600 text-white px-5 rounded-xl font-bold">+</button>
+        <input id="playerInput" placeholder="Join with your name" class="flex-1 input-field">
+        <button onclick="addPlayer()" class="bg-blue-600 text-white px-5 rounded-xl font-bold">Join</button>
       </div>
-      <div id="players" class="flex flex-wrap gap-2 pt-2"></div>
-    </div>
-
-    <div class="glass-card p-5 space-y-4">
-       <div class="flex justify-between items-center">
-         <span class="font-bold">Total Courts</span>
-         <input id="courts" type="number" value="1" min="1" class="w-16 text-center font-bold bg-gray-100 p-2 rounded-lg">
-       </div>
-       <button onclick="generateRounds()" class="w-full bg-orange-500 text-white p-4 rounded-xl font-bold">Generate 20 Fair Rounds</button>
+      <div id="playersList" class="flex flex-wrap gap-2 pt-2 min-h-[40px]"></div>
     </div>
 
     <div id="rounds" class="space-y-8"></div>
 
     <div class="glass-card p-6">
-      <h2 class="text-xl font-bold mb-4">🏆 Leaderboard</h2>
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2">🏆 Rankings</h2>
       <div id="leaderboard" class="divide-y divide-gray-100"></div>
     </div>
+  </div>
+
+  <div class="pt-10 text-center">
+    <button onclick="unlockDev()" class="text-[10px] text-gray-300 font-bold uppercase hover:text-gray-500 transition-colors">Developer</button>
   </div>
 
 </div>
 
 <script>
-// Integrated Firebase Config (Using your updated API Key)
 const firebaseConfig = {
   apiKey: "AiZaSyAKJywAbSKpKHqOs1a-_nQVBuQGkFmF4d4",
   authDomain: "padelpilot-b8e47.firebaseapp.com",
@@ -152,12 +137,21 @@ let players = [];
 let rounds = [];
 let tournamentCreated = false;
 
-// Logic from 1st Code Base
+// UI Unlock
+function unlockDev() {
+  const pass = prompt("Enter Developer Password:");
+  if(pass === DEV_PASSWORD) {
+    document.getElementById('adminSection').style.display = 'block';
+    alert("Admin controls enabled.");
+  } else {
+    alert("Incorrect password.");
+  }
+}
+
 function createTournament(){
   const name = document.getElementById("tName").value.trim();
   const locationVal = document.getElementById("tLocation").value.trim();
   const timeVal = document.getElementById("tTime").value;
-  const devPass = document.getElementById("devPassword").value;
 
   if(!name) return alert("Enter tournament name");
   const newMeetId = name.replace(/\s+/g,'-').toLowerCase();
@@ -167,20 +161,13 @@ function createTournament(){
     const url = location.origin + location.pathname + "?meet="+meetId;
     history.pushState({},'',url);
     document.getElementById("shareLink").value = url;
-
-    db.ref("tournaments/"+meetId).update({
-      name, location: locationVal, time: timeVal, players, rounds
-    });
-
+    db.ref("tournaments/"+meetId).update({ name, location: locationVal, time: timeVal, players, rounds });
     tournamentCreated = true;
-    alert("Arena Ready.");
     return;
   }
 
-  if(devPass !== DEV_PASSWORD) return alert("Admin password required to edit.");
-
   db.ref("tournaments/"+meetId).update({ name, location: locationVal, time: timeVal });
-  alert("Details Updated.");
+  alert("Settings updated.");
 }
 
 function load(){
@@ -192,7 +179,7 @@ function load(){
       players = data.players || [];
       rounds = data.rounds || [];
       if(data.name) document.getElementById("tName").value = data.name;
-      document.getElementById("shareLink").value = location.origin + location.pathname + "?meet="+meetId;
+      document.getElementById("shareLink").value = window.location.href;
       tournamentCreated = true;
       renderPlayers();
       renderRounds();
@@ -202,12 +189,14 @@ function load(){
 }
 
 function addPlayer(){
-  if(!meetId) return alert("Create tournament first");
-  if(localStorage.getItem("joined")) return alert("Joined already");
+  if(!meetId) return alert("Select or create a tournament first.");
+  if(localStorage.getItem("joined_" + meetId)) return alert("You have already joined this arena.");
   const name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!name || players.includes(name)) return;
+  if(!name) return;
+  if(players.includes(name)) return alert("Name taken.");
+  
   players.push(name);
-  localStorage.setItem("joined","true");
+  localStorage.setItem("joined_" + meetId, "true");
   save();
   document.getElementById("playerInput").value="";
 }
@@ -217,27 +206,29 @@ function save(){
 }
 
 function renderPlayers(){
-  const playersDiv = document.getElementById("players");
+  const playersDiv = document.getElementById("playersList");
+  if(!players.length) {
+    playersDiv.innerHTML = '<p class="text-xs text-gray-300 italic">No players yet...</p>';
+    return;
+  }
   playersDiv.innerHTML = players
-    .map(p=>`<span class="bg-gray-100 text-[12px] font-bold px-3 py-1.5 rounded-full border border-gray-200">${p}</span>`)
+    .map(p=>`<span class="bg-gray-50 text-[11px] font-bold px-3 py-1.5 rounded-full border border-gray-100 uppercase tracking-tight">${p}</span>`)
     .join("");
 }
 
 function generateRounds(){
   const courts = parseInt(document.getElementById("courts").value);
-  if(players.length < 4) return alert("Need 4 players");
+  if(players.length < 4) return alert("Minimum 4 players required.");
   
   rounds = [];
   let lastPlayed = {};
 
   for(let r=0; r<20; r++){
     let pool = [...players];
-    // Shuffle
     for(let i = pool.length - 1; i > 0; i--){
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
-    // Fair-resting sort
     pool.sort((a,b)=>(lastPlayed[a]===r-1?1:0)-(lastPlayed[b]===r-1?1:0));
 
     let matches=[];
@@ -256,17 +247,17 @@ function renderRounds(){
   const el = document.getElementById("rounds");
   el.innerHTML="";
   rounds.forEach((r,i)=>{
-    let html=`<div class="space-y-3"><h3 class="text-sm font-black text-gray-400 uppercase tracking-widest">Round ${i+1}</h3>`;
+    let html=`<div class="space-y-3"><h3 class="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Round ${i+1}</h3>`;
     r.forEach((m,j)=>{
       html+=`
-      <div class="match-card flex items-center justify-between shadow-sm">
-        <div class="w-1/3 text-center"><p class="team-label">${m.A[0]}</p><p class="team-label">${m.A[1]}</p></div>
+      <div class="match-card flex items-center justify-between shadow-sm border border-gray-100">
+        <div class="w-1/3 text-center leading-tight uppercase text-[11px] font-bold text-gray-600">${m.A[0]}<br>${m.A[1]}</div>
         <div class="flex items-center gap-2">
           <input class="score-box" value="${m.sA}" onchange="score(${i},${j},'A',this.value)">
-          <span class="text-xs font-bold text-gray-300">VS</span>
+          <span class="text-[9px] font-black text-gray-200">VS</span>
           <input class="score-box" value="${m.sB}" onchange="score(${i},${j},'B',this.value)">
         </div>
-        <div class="w-1/3 text-center"><p class="team-label">${m.B[0]}</p><p class="team-label">${m.B[1]}</p></div>
+        <div class="w-1/3 text-center leading-tight uppercase text-[11px] font-bold text-gray-600">${m.B[0]}<br>${m.B[1]}</div>
       </div>`;
     });
     el.innerHTML += html + `</div>`;
@@ -275,14 +266,9 @@ function renderRounds(){
 
 function score(r,m,side,val){
   val=parseInt(val);
-  if(val!==0 && val!==1){
-    alert("Use 1 for Win, 0 for Loss.");
-    renderRounds();
-    return;
-  }
+  if(val!==0 && val!==1) return renderRounds();
   rounds[r][m]["s"+side]=val;
   save();
-  renderLeaderboard();
 }
 
 function renderLeaderboard(){
@@ -294,14 +280,14 @@ function renderLeaderboard(){
   }));
   let sorted = Object.entries(s).sort((a,b)=>b[1].pts-a[1].pts);
   document.getElementById("leaderboard").innerHTML = sorted.map(([n,v],i)=>`
-    <div class="flex justify-between items-center py-3">
-      <div class="flex items-center gap-3">
-        <span class="text-xs font-bold text-gray-400">#${i+1}</span>
-        <span class="font-bold text-gray-800 capitalize">${n}</span>
+    <div class="flex justify-between items-center py-4">
+      <div class="flex items-center gap-4">
+        <span class="text-xs font-bold ${i < 3 ? 'text-blue-500' : 'text-gray-300'}">0${i+1}</span>
+        <span class="font-bold text-gray-800 uppercase text-sm tracking-tighter">${n}</span>
       </div>
       <div class="text-right">
-        <span class="text-blue-600 font-bold">${v.pts} pts</span>
-        <p class="text-[10px] text-gray-400 font-bold uppercase">${v.w}W - ${v.l}L</p>
+        <span class="text-blue-600 font-black text-lg">${v.pts}</span>
+        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">${v.w}W ${v.l}L</p>
       </div>
     </div>
   `).join("");
