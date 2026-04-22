@@ -70,13 +70,13 @@
     <button onclick="generateFairRotation()" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-5 rounded-2xl font-black text-lg shadow-lg shadow-orange-100 transition active:scale-95">
       UPDATE / ROTATE PLAYERS
     </button>
-    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Prioritizes players with fewer games</p>
+    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Fair Rotation Logic Enabled</p>
   </div>
 
   <div id="allRoundsContainer" class="space-y-10"></div>
 
   <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden border-slate-200">
-    <div class="p-6 border-b bg-slate-50/50"><h2 class="text-xl font-black text-slate-800 uppercase tracking-tight">Standings</h2></div>
+    <div class="p-6 border-b bg-slate-50/50 font-black text-slate-800 uppercase tracking-tight text-xl">Standings</div>
     <table class="w-full">
       <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
         <tr><th class="py-4 px-6 text-left">Rank</th><th class="py-4 text-left">Player</th><th class="py-4 text-center">W-L</th><th class="py-4 text-right px-6">Points</th></tr>
@@ -107,6 +107,7 @@ const DEV_PASSWORD = "padel-dev-123";
 
 let meetId = null, players = [], allRounds = [], registeredIPs = [], isAdmin = false, userIP = "";
 
+// Security: Capture IP Address
 fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => userIP = d.ip);
 
 function loadArena() {
@@ -118,7 +119,7 @@ function loadArena() {
       const data = snap.val() || {};
       players = data.players || [];
       allRounds = data.rounds || [];
-      registeredIPs = data.registeredIPs || [];
+      registeredIPs = data.registeredIPs || []; // Security: Load locked IPs
       
       if(data.name && !isAdmin) {
         document.getElementById("tournamentName").value = data.name;
@@ -141,17 +142,16 @@ function lockInputs(lock) {
   });
   const btn = document.getElementById("updateBtn");
   btn.disabled = lock;
-  btn.innerText = lock ? "Arena Details Locked" : "Update Arena Details";
+  btn.innerText = lock ? "Details Locked" : "Update Details";
   btn.style.opacity = lock ? "0.5" : "1";
 }
 
 function unlockDev() {
-  if(prompt("Password:") === DEV_PASSWORD) {
+  if(prompt("Admin Key:") === DEV_PASSWORD) {
     isAdmin = true;
     document.getElementById("devIndicator").classList.remove("hidden");
     document.getElementById("adminResetContainer").classList.remove("hidden");
     lockInputs(false);
-    document.getElementById("updateBtn").innerText = "Update Arena (Admin Mode)";
     renderPlayers();
   }
 }
@@ -160,22 +160,26 @@ function createTournament() {
   const name = document.getElementById("tournamentName").value.trim();
   const loc = document.getElementById("tournamentLocation").value.trim();
   const time = document.getElementById("tournamentTime").value;
-  if(!name || !loc || !time) return alert("Fill all fields.");
-  
+  if(!name || !loc || !time) return alert("Complete Setup.");
   meetId = name.replace(/\s+/g,'-').toLowerCase();
   history.pushState({}, '', "?meet=" + meetId);
   db.ref("tournaments/" + meetId).update({ name, location: loc, time: time, createdAt: Date.now(), players, rounds: allRounds, registeredIPs: [] });
 }
 
 function addPlayer() {
-  if(!meetId) return alert("Setup arena first.");
-  if(!isAdmin && registeredIPs.includes(userIP)) return alert("One player per device.");
+  if(!meetId) return alert("Save arena first.");
+  
+  // Security: Check if IP is already in the database
+  if(!isAdmin && registeredIPs.includes(userIP)) {
+    return alert("SECURITY: You have already registered a player from this device.");
+  }
   
   const name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!name || players.some(p => p.name === name)) return alert("Unique name required.");
+  if(!name || players.some(p => p.name === name)) return alert("Enter unique name.");
   
   players.push({ name: name, checkedIn: false });
-  if(!isAdmin) registeredIPs.push(userIP);
+  if(!isAdmin) registeredIPs.push(userIP); // Security: Record IP
+  
   saveData();
   document.getElementById("playerInput").value = "";
 }
@@ -189,17 +193,16 @@ function toggleCheckIn(i) {
 function generateFairRotation() {
   const activePlayers = players.filter(p => p.checkedIn).map(p => p.name);
   const courts = parseInt(document.getElementById("courtsInput").value);
-  if (activePlayers.length < 4) return alert("Need 4 checked-in players.");
+  if (activePlayers.length < 4) return alert("Min 4 players needed.");
 
   let playCounts = {};
   activePlayers.forEach(p => playCounts[p] = 0);
 
-  // Keep rounds that have scores
   let existingRounds = allRounds.filter(r => r.some(m => m.sA !== "" || m.sB !== ""));
   existingRounds.forEach(r => r.forEach(m => [...m.tA, ...m.tB].forEach(p => { if(playCounts[p] !== undefined) playCounts[p]++; })));
 
   let newRounds = [...existingRounds];
-  for (let r = newRounds.length; r < 15; r++) {
+  for (let r = newRounds.length; r < 20; r++) {
     let pool = [...activePlayers].sort((a,b) => playCounts[a] - playCounts[b] || Math.random() - 0.5);
     let matches = [];
     for (let c = 0; c < courts; c++) {
@@ -227,7 +230,7 @@ function renderPlayers() {
         <span class="status-pill mt-1 inline-block w-fit ${p.checkedIn ? 'bg-green-200 text-green-800' : 'bg-slate-200 text-slate-400'}">${p.checkedIn ? 'Ready' : 'Pending'}</span>
       </div>
       ${isAdmin ? `<div class="flex gap-2">
-        <button onclick="toggleCheckIn(${i})" class="text-[10px] font-bold px-3 py-1 rounded-lg bg-white border shadow-sm">Check In</button>
+        <button onclick="toggleCheckIn(${i})" class="text-[10px] font-bold px-3 py-1 rounded-lg bg-white border shadow-sm">Toggle</button>
         <button onclick="removePlayer(${i})" class="text-red-400 text-lg px-2">✕</button>
       </div>` : ''}
     </div>`).join("");
@@ -237,7 +240,7 @@ function renderAllRounds() {
   const container = document.getElementById("allRoundsContainer"); container.innerHTML = "";
   allRounds.forEach((r, i) => {
     let html = `<div class="space-y-4"><div class="flex items-center gap-4"><div class="h-[1px] flex-1 bg-slate-200"></div><span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Round ${i+1}</span><div class="h-[1px] flex-1 bg-slate-200"></div></div>`;
-    r.forEach((m, j) => { html += `<div class="match-card shadow-sm border-slate-100"><div class="team-block text-slate-800">${m.tA[0]}<br>${m.tA[1]}</div><div class="flex items-center gap-2"><input class="score-input" value="${m.sA}" onchange="updateScore(${i},${j},'sA',this.value)"><span class="text-[9px] font-black text-slate-300">VS</span><input class="score-input" value="${m.sB}" onchange="updateScore(${i},${j},'sB',this.value)"></div><div class="team-block text-slate-800">${m.tB[0]}<br>${m.tB[1]}</div></div>`; });
+    r.forEach((m, j) => { html += `<div class="match-card shadow-sm"><div class="team-block text-slate-800">${m.tA[0]}<br>${m.tA[1]}</div><div class="flex items-center gap-2"><input class="score-input" value="${m.sA}" onchange="updateScore(${i},${j},'sA',this.value)"><span class="text-[9px] font-black text-slate-300">VS</span><input class="score-input" value="${m.sB}" onchange="updateScore(${i},${j},'sB',this.value)"></div><div class="team-block text-slate-800">${m.tB[0]}<br>${m.tB[1]}</div></div>`; });
     container.innerHTML += html + "</div>";
   });
 }
@@ -258,7 +261,7 @@ function renderLeaderboard() {
 
 function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds, registeredIPs }); }
 function removePlayer(i) { if(isAdmin && confirm("Remove?")) { players.splice(i,1); saveData(); } }
-function masterReset() { if(confirm("DANGER: Wipes everything!")) { db.ref("tournaments/" + meetId).set(null); location.href = location.origin + location.pathname; } }
+function masterReset() { if(confirm("Wipe all data?")) { db.ref("tournaments/" + meetId).set(null); location.href = location.origin + location.pathname; } }
 function copyLink() { const el = document.getElementById("shareLink"); el.select(); document.execCommand('copy'); document.getElementById("copyBtn").innerText = "COPIED!"; setTimeout(() => document.getElementById("copyBtn").innerText = "Copy Link", 2000); }
 
 loadArena();
