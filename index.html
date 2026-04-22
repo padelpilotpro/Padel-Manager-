@@ -4,75 +4,91 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PadelPilot Arena | Pro</title>
+
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
     body { background: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; color: #0f172a; }
     .glass-card { background: white; border-radius: 28px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.05); }
-    .match-card { background: white; border-radius: 24px; padding: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; margin-bottom: 12px; }
-    .team-block { width: 35%; text-align: center; font-size: 14px; font-weight: 700; color: #1e293b; text-transform: uppercase; line-height: 1.2; }
-    .score-input { width: 50px; height: 45px; text-align: center; font-size: 18px; font-weight: 800; border: 2px solid #f1f5f9; border-radius: 10px; background: #f8fafc; }
+    .match-card { background: white; border-radius: 24px; padding: 24px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; }
+    .team-block { width: 38%; text-align: center; font-size: 16px; font-weight: 700; color: #1e293b; text-transform: uppercase; line-height: 1.2; }
+    .score-input { width: 60px; height: 50px; text-align: center; font-size: 20px; font-weight: 800; border: 2px solid #f1f5f9; border-radius: 12px; background: #f8fafc; }
     .locked-input { background-color: #f1f5f9 !important; color: #94a3b8; cursor: not-allowed; }
+    .status-pill { font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em; }
   </style>
 </head>
 <body>
 
-<div class="max-w-xl mx-auto px-5 py-8 space-y-6">
-  <div class="text-center">
+<div class="max-w-xl mx-auto px-5 py-8 space-y-8">
+
+  <div class="text-center py-4">
     <div class="text-4xl font-black tracking-tighter text-slate-900">PADELPILOT <span class="text-blue-600">ARENA</span></div>
-    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block">Admin Mode</div>
+    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block">Edit Mode Active</div>
   </div>
 
   <section class="glass-card space-y-4">
+    <h3 class="text-slate-800 font-extrabold text-lg">Arena Setup</h3>
     <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Tournament Name">
     <div class="grid grid-cols-2 gap-4">
       <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Location">
       <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none">
     </div>
-    <button id="updateBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">Save Tournament</button>
+    <button id="updateBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition active:scale-95">Save & Lock Details</button>
   </section>
+
+  <div id="shareSection" class="glass-card hidden">
+    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Share with Players</label>
+    <div class="flex gap-2">
+      <input id="shareLink" class="flex-1 p-3 border rounded-xl text-xs bg-slate-50 font-mono text-slate-500 overflow-hidden text-ellipsis" readonly />
+      <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold transition">Copy Link</button>
+    </div>
+  </div>
 
   <div class="space-y-3">
     <div class="flex gap-2">
-      <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg outline-none" placeholder="Player Name">
-      <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold">Join</button>
+      <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg shadow-sm outline-none focus:ring-2 ring-blue-100" placeholder="Enter Player Name">
+      <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold shadow-lg shadow-blue-100 transition active:scale-95">Join</button>
     </div>
+    
     <div class="glass-card">
-      <div class="font-bold text-xs text-slate-400 uppercase mb-4 flex justify-between">
-        Roster <span class="text-blue-600"><span id="activeCount">0</span> Checked-In</span>
+      <div class="font-bold text-xs text-slate-400 uppercase tracking-tighter mb-4 flex justify-between items-center">
+        Live Roster 
+        <span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-md"><span id="activeCount">0</span> Ready / <span id="playerCount">0</span> Total</span>
       </div>
       <div id="playersList" class="space-y-2"></div>
     </div>
   </div>
 
-  <div class="glass-card space-y-4 text-center">
+  <div class="glass-card space-y-4 text-center border-orange-100">
     <div class="flex justify-between items-center">
-      <label class="font-bold">Available Courts</label>
-      <input id="courtsInput" type="number" min="1" value="1" class="w-16 p-2 border rounded-xl text-center font-bold bg-orange-50">
+      <label class="font-bold text-slate-700">Available Courts</label>
+      <input id="courtsInput" type="number" min="1" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50">
     </div>
-    <button onclick="generateFairRotation()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg">
+    <button onclick="generateFairRotation()" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-5 rounded-2xl font-black text-lg shadow-lg shadow-orange-100 transition active:scale-95">
       UPDATE / ROTATE PLAYERS
     </button>
-    <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Ensures players with fewer games play next</p>
+    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Prioritizes players with fewer games</p>
   </div>
 
   <div id="allRoundsContainer" class="space-y-10"></div>
 
-  <div id="leaderboardSection" class="bg-white border rounded-[32px] overflow-hidden">
+  <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden border-slate-200">
+    <div class="p-6 border-b bg-slate-50/50"><h2 class="text-xl font-black text-slate-800 uppercase tracking-tight">Standings</h2></div>
     <table class="w-full">
       <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
-        <tr><th class="py-4 px-6 text-left">Rank</th><th class="py-4 text-left">Player</th><th class="py-4 text-center">W-L</th><th class="py-4 text-right px-6">Pts</th></tr>
+        <tr><th class="py-4 px-6 text-left">Rank</th><th class="py-4 text-left">Player</th><th class="py-4 text-center">W-L</th><th class="py-4 text-right px-6">Points</th></tr>
       </thead>
-      <tbody id="leaderboardBody"></tbody>
+      <tbody id="leaderboardBody" class="divide-y divide-slate-100 font-medium text-slate-700"></tbody>
     </table>
   </div>
 
-  <div class="text-center py-10">
-    <button onclick="unlockDev()" class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">Developer Access</button>
-    <div id="adminResetContainer" class="hidden mt-4">
-        <button onclick="masterReset()" class="text-[10px] text-red-400 font-bold uppercase border p-2 rounded-full">Full Reset</button>
+  <div class="text-center py-12 space-y-4">
+    <button onclick="unlockDev()" class="text-[10px] text-slate-300 font-bold uppercase tracking-[0.4em] hover:text-slate-500">Developer Settings</button>
+    <div id="adminResetContainer" class="hidden">
+        <button onclick="masterReset()" class="text-[10px] text-red-400 font-bold uppercase border border-red-100 px-4 py-2 rounded-full hover:bg-red-50">Master Reset</button>
     </div>
   </div>
 </div>
@@ -84,21 +100,33 @@ const firebaseConfig = {
   databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
   projectId: "padelpilot-b8e47"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const DEV_PASSWORD = "padel-dev-123";
 
-let meetId = null, players = [], allRounds = [], isAdmin = false;
+let meetId = null, players = [], allRounds = [], registeredIPs = [], isAdmin = false, userIP = "";
+
+fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => userIP = d.ip);
 
 function loadArena() {
   const params = new URLSearchParams(location.search);
   if (params.get("meet")) {
     meetId = params.get("meet");
+    document.getElementById("shareSection").classList.remove("hidden");
     db.ref("tournaments/" + meetId).on("value", snap => {
       const data = snap.val() || {};
       players = data.players || [];
       allRounds = data.rounds || [];
-      if(data.name && !isAdmin) lockInputs(true);
+      registeredIPs = data.registeredIPs || [];
+      
+      if(data.name && !isAdmin) {
+        document.getElementById("tournamentName").value = data.name;
+        document.getElementById("tournamentLocation").value = data.location || "";
+        document.getElementById("tournamentTime").value = data.time || "";
+        lockInputs(true);
+      }
+      document.getElementById("shareLink").value = window.location.href;
       renderPlayers(); renderAllRounds(); renderLeaderboard();
     });
   }
@@ -108,24 +136,46 @@ function lockInputs(lock) {
   const fields = ["tournamentLocation", "tournamentTime"];
   fields.forEach(f => {
     const el = document.getElementById(f);
-    if(el) { el.readOnly = lock; if(lock) el.classList.add("locked-input"); }
+    el.readOnly = lock;
+    lock ? el.classList.add("locked-input") : el.classList.remove("locked-input");
   });
+  const btn = document.getElementById("updateBtn");
+  btn.disabled = lock;
+  btn.innerText = lock ? "Arena Details Locked" : "Update Arena Details";
+  btn.style.opacity = lock ? "0.5" : "1";
 }
 
 function unlockDev() {
-  if(prompt("Admin Password:") === DEV_PASSWORD) {
+  if(prompt("Password:") === DEV_PASSWORD) {
     isAdmin = true;
     document.getElementById("devIndicator").classList.remove("hidden");
     document.getElementById("adminResetContainer").classList.remove("hidden");
     lockInputs(false);
+    document.getElementById("updateBtn").innerText = "Update Arena (Admin Mode)";
     renderPlayers();
   }
 }
 
+function createTournament() {
+  const name = document.getElementById("tournamentName").value.trim();
+  const loc = document.getElementById("tournamentLocation").value.trim();
+  const time = document.getElementById("tournamentTime").value;
+  if(!name || !loc || !time) return alert("Fill all fields.");
+  
+  meetId = name.replace(/\s+/g,'-').toLowerCase();
+  history.pushState({}, '', "?meet=" + meetId);
+  db.ref("tournaments/" + meetId).update({ name, location: loc, time: time, createdAt: Date.now(), players, rounds: allRounds, registeredIPs: [] });
+}
+
 function addPlayer() {
+  if(!meetId) return alert("Setup arena first.");
+  if(!isAdmin && registeredIPs.includes(userIP)) return alert("One player per device.");
+  
   const name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!name || players.some(p => p.name === name)) return alert("Unique name required");
-  players.push({ name, checkedIn: false });
+  if(!name || players.some(p => p.name === name)) return alert("Unique name required.");
+  
+  players.push({ name: name, checkedIn: false });
+  if(!isAdmin) registeredIPs.push(userIP);
   saveData();
   document.getElementById("playerInput").value = "";
 }
@@ -137,41 +187,29 @@ function toggleCheckIn(i) {
 }
 
 function generateFairRotation() {
-  const activeNames = players.filter(p => p.checkedIn).map(p => p.name);
+  const activePlayers = players.filter(p => p.checkedIn).map(p => p.name);
   const courts = parseInt(document.getElementById("courtsInput").value);
-  if (activeNames.length < 4) return alert("At least 4 checked-in players needed.");
+  if (activePlayers.length < 4) return alert("Need 4 checked-in players.");
 
-  // TRACK PLAY COUNT: How many times has each player appeared in the schedule?
   let playCounts = {};
-  activeNames.forEach(name => playCounts[name] = 0);
-  
-  // Only keep rounds that are ALREADY FINISHED (have scores)
+  activePlayers.forEach(p => playCounts[p] = 0);
+
+  // Keep rounds that have scores
   let existingRounds = allRounds.filter(r => r.some(m => m.sA !== "" || m.sB !== ""));
-  
-  // Count plays in existing rounds
-  existingRounds.forEach(r => r.forEach(m => {
-    [...m.tA, ...m.tB].forEach(p => { if(playCounts[p] !== undefined) playCounts[p]++; });
-  }));
+  existingRounds.forEach(r => r.forEach(m => [...m.tA, ...m.tB].forEach(p => { if(playCounts[p] !== undefined) playCounts[p]++; })));
 
   let newRounds = [...existingRounds];
-
-  // Generate 15 rounds total, prioritizing people who haven't played
   for (let r = newRounds.length; r < 15; r++) {
-    let roundMatches = [];
-    let pool = [...activeNames].sort((a, b) => {
-      // Sort by play count first (lowest plays first), then randomize if counts are equal
-      if (playCounts[a] !== playCounts[b]) return playCounts[a] - playCounts[b];
-      return Math.random() - 0.5;
-    });
-
+    let pool = [...activePlayers].sort((a,b) => playCounts[a] - playCounts[b] || Math.random() - 0.5);
+    let matches = [];
     for (let c = 0; c < courts; c++) {
       if (pool.length >= 4) {
         let p1 = pool.shift(), p2 = pool.shift(), p3 = pool.shift(), p4 = pool.shift();
-        roundMatches.push({ tA: [p1, p2], tB: [p3, p4], sA: "", sB: "" });
+        matches.push({ tA: [p1, p2], tB: [p3, p4], sA: "", sB: "" });
         [p1, p2, p3, p4].forEach(p => playCounts[p]++);
       }
     }
-    newRounds.push(roundMatches);
+    newRounds.push(matches);
   }
   allRounds = newRounds;
   saveData();
@@ -179,39 +217,33 @@ function generateFairRotation() {
 
 function renderPlayers() {
   const active = players.filter(p => p.checkedIn).length;
+  document.getElementById("playerCount").innerText = players.length;
   document.getElementById("activeCount").innerText = active;
+
   document.getElementById("playersList").innerHTML = players.map((p, i) => `
-    <div class="flex items-center justify-between p-3 border rounded-2xl ${p.checkedIn ? 'bg-green-50 border-green-100' : 'bg-slate-50'}">
-      <span class="font-bold uppercase ${p.checkedIn ? 'text-green-700' : 'text-slate-400'}">${p.name}</span>
-      ${isAdmin ? `<button onclick="toggleCheckIn(${i})" class="text-[10px] font-bold border px-2 py-1 rounded-lg bg-white">Toggle</button>` : ''}
+    <div class="flex items-center justify-between p-4 border rounded-2xl ${p.checkedIn ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'}">
+      <div class="flex flex-col">
+        <span class="text-sm font-bold uppercase ${p.checkedIn ? 'text-green-700' : 'text-slate-400'}">${p.name}</span>
+        <span class="status-pill mt-1 inline-block w-fit ${p.checkedIn ? 'bg-green-200 text-green-800' : 'bg-slate-200 text-slate-400'}">${p.checkedIn ? 'Ready' : 'Pending'}</span>
+      </div>
+      ${isAdmin ? `<div class="flex gap-2">
+        <button onclick="toggleCheckIn(${i})" class="text-[10px] font-bold px-3 py-1 rounded-lg bg-white border shadow-sm">Check In</button>
+        <button onclick="removePlayer(${i})" class="text-red-400 text-lg px-2">✕</button>
+      </div>` : ''}
     </div>`).join("");
 }
 
 function renderAllRounds() {
-  const container = document.getElementById("allRoundsContainer");
-  container.innerHTML = "";
+  const container = document.getElementById("allRoundsContainer"); container.innerHTML = "";
   allRounds.forEach((r, i) => {
-    let html = `<div class="space-y-3"><div class="text-[10px] font-black text-slate-300 uppercase text-center tracking-tighter">Round ${i+1}</div>`;
-    r.forEach((m, j) => {
-      html += `
-        <div class="match-card shadow-sm">
-          <div class="team-block">${m.tA[0]}<br>${m.tA[1]}</div>
-          <div class="flex gap-2">
-            <input class="score-input" value="${m.sA}" onchange="updateScore(${i},${j},'sA',this.value)">
-            <input class="score-input" value="${m.sB}" onchange="updateScore(${i},${j},'sB',this.value)">
-          </div>
-          <div class="team-block">${m.tB[0]}<br>${m.tB[1]}</div>
-        </div>`;
-    });
+    let html = `<div class="space-y-4"><div class="flex items-center gap-4"><div class="h-[1px] flex-1 bg-slate-200"></div><span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Round ${i+1}</span><div class="h-[1px] flex-1 bg-slate-200"></div></div>`;
+    r.forEach((m, j) => { html += `<div class="match-card shadow-sm border-slate-100"><div class="team-block text-slate-800">${m.tA[0]}<br>${m.tA[1]}</div><div class="flex items-center gap-2"><input class="score-input" value="${m.sA}" onchange="updateScore(${i},${j},'sA',this.value)"><span class="text-[9px] font-black text-slate-300">VS</span><input class="score-input" value="${m.sB}" onchange="updateScore(${i},${j},'sB',this.value)"></div><div class="team-block text-slate-800">${m.tB[0]}<br>${m.tB[1]}</div></div>`; });
     container.innerHTML += html + "</div>";
   });
 }
 
 function updateScore(ri, mi, team, val) {
-  if(val === "1" || val === "0") {
-    allRounds[ri][mi][team] = val;
-    saveData();
-  }
+  if(val === "1" || val === "0") { allRounds[ri][mi][team] = val; saveData(); }
 }
 
 function renderLeaderboard() {
@@ -221,22 +253,14 @@ function renderLeaderboard() {
     if(m.sB === "1") { m.tB.forEach(p=>{if(s[p])s[p].pts+=3}); m.tA.forEach(p=>{if(s[p])s[p].l++}); }
   }));
   let sorted = Object.entries(s).sort((a,b) => b[1].pts - a[1].pts);
-  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `
-    <tr class="border-b"><td class="py-4 px-6 font-bold text-slate-300">#${i+1}</td>
-    <td class="font-bold uppercase text-xs">${n}</td><td class="text-center font-bold text-slate-400 text-xs">${v.w}-${v.l}</td>
-    <td class="text-right px-6 font-black text-blue-600">${v.pts}</td></tr>`).join("");
+  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `<tr><td class="py-5 px-6 font-black text-slate-300 text-xs">#0${i+1}</td><td class="py-5 font-bold uppercase text-xs">${n}</td><td class="py-5 text-center text-[10px] font-bold text-slate-400">${v.w}W-${v.l}L</td><td class="py-5 text-right px-6 font-black text-blue-600">${v.pts}</td></tr>`).join("");
 }
 
-function createTournament() {
-  const name = document.getElementById("tournamentName").value.trim();
-  if(!name) return alert("Enter Name");
-  meetId = name.replace(/\s+/g,'-').toLowerCase();
-  db.ref("tournaments/" + meetId).update({ name, location: document.getElementById("tournamentLocation").value, time: document.getElementById("tournamentTime").value, createdAt: Date.now(), players });
-  history.pushState({}, '', "?meet=" + meetId);
-}
+function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds, registeredIPs }); }
+function removePlayer(i) { if(isAdmin && confirm("Remove?")) { players.splice(i,1); saveData(); } }
+function masterReset() { if(confirm("DANGER: Wipes everything!")) { db.ref("tournaments/" + meetId).set(null); location.href = location.origin + location.pathname; } }
+function copyLink() { const el = document.getElementById("shareLink"); el.select(); document.execCommand('copy'); document.getElementById("copyBtn").innerText = "COPIED!"; setTimeout(() => document.getElementById("copyBtn").innerText = "Copy Link", 2000); }
 
-function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds }); }
-function masterReset() { if(confirm("Wipe?")) { db.ref("tournaments/" + meetId).set(null); location.href = location.origin + location.pathname; } }
 loadArena();
 </script>
 </body>
