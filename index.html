@@ -14,81 +14,91 @@
     body { background: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; color: #0f172a; }
     .glass-card { background: white; border-radius: 28px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.05); }
     .match-card { background: white; border-radius: 24px; padding: 20px; border: 1px solid #e2e8f0; }
-    .team-btn { flex: 1; padding: 12px; border-radius: 16px; border: 2px solid #f1f5f9; transition: all 0.2s; text-align: center; }
+    .team-btn { flex: 1; padding: 12px; border-radius: 16px; border: 2px solid #f1f5f9; transition: all 0.2s; text-align: center; cursor: pointer; }
     .team-btn.winner { background: #eff6ff; border-color: #3b82f6; }
     .team-btn.winner span { color: #1d4ed8; font-weight: 800; }
-    .nav-tab { flex: 1; text-align: center; padding: 12px; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 14px; transition: all 0.3s; color: #94a3b8; }
+    .nav-tab { flex: 1; text-align: center; padding: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; border-radius: 14px; transition: all 0.3s; color: #94a3b8; }
     .nav-tab.active { background: white; color: #3b82f6; box-shadow: 0 4px 12px -2px rgb(59 130 246 / 0.15); }
+    .locked-field { background-color: #f1f5f9 !important; color: #64748b !important; cursor: not-allowed; border-color: #e2e8f0 !important; }
   </style>
 </head>
 <body>
 
-<div class="sticky top-0 z-50 bg-slate-50/80 backdrop-blur-md px-5 py-4">
+<div class="sticky top-0 z-50 bg-slate-50/90 backdrop-blur-md px-5 py-4 border-b border-slate-100">
   <div class="max-w-xl mx-auto flex bg-slate-200/50 p-1 rounded-2xl">
-    <button onclick="switchTab('arena')" id="tab-arena" class="nav-tab active">Arena Management</button>
-    <button onclick="switchTab('stats')" id="tab-stats" class="nav-tab">Live Standings</button>
+    <button onclick="switchTab('arena')" id="tab-arena" class="nav-tab active">Arena Hub</button>
+    <button onclick="switchTab('stats')" id="tab-stats" class="nav-tab">Standings</button>
   </div>
 </div>
 
-<div class="max-w-xl mx-auto px-5 py-4 space-y-8">
+<div class="max-w-xl mx-auto px-5 py-6 space-y-8">
 
   <div class="text-center">
     <div class="text-4xl font-black tracking-tighter text-slate-900">PADELPILOT <span class="text-blue-600">ARENA</span></div>
-    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block">Edit Mode Active</div>
+    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block tracking-widest">Admin Access Granted</div>
   </div>
 
   <div id="view-arena" class="space-y-8">
+    
     <section class="glass-card space-y-4">
-      <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Tournament Name">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Tournament Details</div>
+      <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none font-bold" placeholder="Tournament Name">
       <div class="grid grid-cols-2 gap-4">
         <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Location">
         <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none">
       </div>
-      <button id="updateBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">Save Arena Details</button>
+      <button id="updateBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition active:scale-95">Save & Lock Arena</button>
     </section>
 
-    <div id="shareSection" class="glass-card hidden flex gap-2">
-      <input id="shareLink" class="flex-1 p-3 border rounded-xl text-xs bg-slate-50 font-mono text-slate-500" readonly />
-      <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold">Copy</button>
+    <div id="shareSection" class="glass-card hidden space-y-3">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Invite Players</div>
+      <div class="flex gap-2">
+        <input id="shareLink" class="flex-1 p-3 border rounded-xl text-[10px] bg-slate-50 font-mono text-slate-400 truncate" readonly />
+        <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold whitespace-nowrap">Copy Link</button>
+      </div>
     </div>
 
     <div class="space-y-3">
       <div class="flex gap-2">
-        <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg outline-none" placeholder="Enter Player Name">
-        <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold">Join</button>
+        <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg outline-none focus:ring-2 ring-blue-100" placeholder="Your Name">
+        <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold shadow-lg shadow-blue-100">Join</button>
       </div>
-      <div class="glass-card" id="playersList"></div>
+      <div class="glass-card">
+        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Checked-In Players</div>
+        <div id="playersList" class="space-y-2"></div>
+      </div>
     </div>
 
-    <div class="glass-card space-y-4 text-center border-orange-100">
-      <div class="flex justify-between items-center">
-        <label class="font-bold text-slate-700">Available Courts</label>
-        <input id="courtsInput" type="number" min="1" value="1" class="w-16 p-2 border rounded-xl text-center font-bold bg-orange-50">
+    <div class="glass-card space-y-4 text-center border-orange-100 shadow-orange-50/50 shadow-lg">
+      <div class="flex justify-between items-center px-2">
+        <label class="font-bold text-slate-700">Courts Available</label>
+        <input id="courtsInput" type="number" min="1" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50 border-orange-200">
       </div>
-      <button onclick="generateFairRotation()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg">UPDATE / ROTATE PLAYERS</button>
+      <button onclick="generateFairRotation()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg shadow-md transition active:scale-95">ROTATE & ASSIGN PLAYERS</button>
     </div>
 
-    <div id="allRoundsContainer" class="space-y-10"></div>
+    <div id="allRoundsContainer" class="space-y-10 pb-10"></div>
   </div>
 
   <div id="view-stats" class="hidden space-y-6">
     <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden border-slate-200">
-      <div class="p-6 border-b bg-slate-50/50 font-black text-slate-800 uppercase tracking-tight text-xl text-center">Tournament Standings</div>
+      <div class="p-8 border-b bg-slate-50/50"><h2 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">Current Ranking</h2></div>
       <table class="w-full">
         <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
-          <tr><th class="py-4 px-6 text-left">Rank</th><th class="py-4 text-left">Player</th><th class="py-4 text-center">Record</th><th class="py-4 text-right px-6">Points</th></tr>
+          <tr><th class="py-4 px-6 text-left">Rank</th><th class="py-4 text-left">Player</th><th class="py-4 text-center">W-L</th><th class="py-4 text-right px-6">Pts</th></tr>
         </thead>
-        <tbody id="leaderboardBody"></tbody>
+        <tbody id="leaderboardBody" class="divide-y divide-slate-100"></tbody>
       </table>
     </div>
   </div>
 
-  <div class="text-center py-12">
-    <button onclick="unlockDev()" class="text-[10px] text-slate-300 font-bold uppercase tracking-[0.4em]">Developer Settings</button>
-    <div id="adminResetContainer" class="hidden mt-4">
-        <button onclick="masterReset()" class="text-[10px] text-red-400 font-bold uppercase border p-2 rounded-full">Master Reset</button>
+  <div class="text-center py-10 border-t border-slate-100 mt-20">
+    <button onclick="unlockDev()" class="text-[10px] text-slate-300 font-bold uppercase tracking-[0.4em] hover:text-blue-400 transition">Developer Key</button>
+    <div id="adminResetContainer" class="hidden mt-6 flex justify-center gap-4">
+        <button onclick="masterReset()" class="text-[10px] text-red-400 font-bold uppercase border border-red-100 px-6 py-2 rounded-full hover:bg-red-50">Wipe Tournament</button>
     </div>
   </div>
+
 </div>
 
 <script>
@@ -111,7 +121,6 @@ function switchTab(target) {
   document.getElementById('view-stats').classList.add('hidden');
   document.getElementById('tab-arena').classList.remove('active');
   document.getElementById('tab-stats').classList.remove('active');
-  
   document.getElementById('view-' + target).classList.remove('hidden');
   document.getElementById('tab-' + target).classList.add('active');
 }
@@ -121,54 +130,78 @@ function loadArena() {
   if (params.get("meet")) {
     meetId = params.get("meet");
     document.getElementById("shareSection").classList.remove("hidden");
+    document.getElementById("shareLink").value = window.location.href;
+
     db.ref("tournaments/" + meetId).on("value", snap => {
       const data = snap.val() || {};
       players = data.players || [];
       allRounds = data.rounds || [];
       registeredIPs = data.registeredIPs || [];
-      if(data.name && !isAdmin) {
+
+      // DYNAMIC LOCKING LOGIC
+      if(data.name) {
           document.getElementById("tournamentName").value = data.name;
-          document.getElementById("tournamentLocation").value = data.location;
-          document.getElementById("tournamentTime").value = data.time;
-          lockInputs(true);
+          document.getElementById("tournamentLocation").value = data.location || "";
+          document.getElementById("tournamentTime").value = data.time || "";
+          
+          if(!isAdmin) {
+              applyFieldLock(true);
+          } else {
+              applyFieldLock(false);
+          }
       }
-      document.getElementById("shareLink").value = window.location.href;
       renderPlayers(); renderAllRounds(); renderLeaderboard();
     });
   }
 }
 
-function lockInputs(lock) {
-  const fields = ["tournamentLocation", "tournamentTime"];
-  fields.forEach(f => {
-    const el = document.getElementById(f);
-    if(el) el.readOnly = lock;
-  });
+function applyFieldLock(lock) {
+    const ids = ["tournamentName", "tournamentLocation", "tournamentTime"];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        el.readOnly = lock;
+        lock ? el.classList.add("locked-field") : el.classList.remove("locked-field");
+    });
+    const btn = document.getElementById("updateBtn");
+    btn.disabled = lock;
+    btn.innerText = lock ? "Tournament Locked" : "Save Arena Details";
+    btn.style.opacity = lock ? "0.5" : "1";
 }
 
 function unlockDev() {
-  if(prompt("Admin Key:") === DEV_PASSWORD) {
+  if(prompt("Enter Admin Pass:") === DEV_PASSWORD) {
     isAdmin = true;
     document.getElementById("devIndicator").classList.remove("hidden");
     document.getElementById("adminResetContainer").classList.remove("hidden");
-    lockInputs(false);
+    applyFieldLock(false);
     renderPlayers();
   }
 }
 
 function createTournament() {
   const name = document.getElementById("tournamentName").value.trim();
-  if(!name) return;
+  if(!name) return alert("Missing name");
   meetId = name.replace(/\s+/g,'-').toLowerCase();
-  db.ref("tournaments/" + meetId).update({ name, location: document.getElementById("tournamentLocation").value, time: document.getElementById("tournamentTime").value, createdAt: Date.now(), players });
-  history.pushState({}, '', "?meet=" + meetId);
+  
+  db.ref("tournaments/" + meetId).update({ 
+      name, 
+      location: document.getElementById("tournamentLocation").value, 
+      time: document.getElementById("tournamentTime").value, 
+      createdAt: Date.now() 
+  }).then(() => {
+      history.pushState({}, '', "?meet=" + meetId);
+      document.getElementById("shareSection").classList.remove("hidden");
+      document.getElementById("shareLink").value = window.location.href;
+  });
 }
 
 function addPlayer() {
-  if(!meetId) return;
-  if(!isAdmin && registeredIPs.includes(userIP)) return alert("Security: One entry per device.");
+  if(!meetId) return alert("Save arena details first!");
+  if(!isAdmin && registeredIPs.includes(userIP)) return alert("You have already joined from this phone.");
+  
   const name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!name || players.some(p => p.name === name)) return;
+  if(!name || players.some(p => p.name === name)) return alert("Unique name needed.");
+  
   players.push({ name, checkedIn: false });
   if(!isAdmin) registeredIPs.push(userIP);
   saveData();
@@ -190,12 +223,15 @@ function selectWinner(ri, mi, team) {
 function generateFairRotation() {
   const activePlayers = players.filter(p => p.checkedIn).map(p => p.name);
   const courts = parseInt(document.getElementById("courtsInput").value);
-  if (activePlayers.length < 4) return alert("Need 4 players.");
+  if (activePlayers.length < 4) return alert("Need at least 4 ready players.");
+  
   let playCounts = {}; activePlayers.forEach(p => playCounts[p] = 0);
   let existingRounds = allRounds.filter(r => r.some(m => m.sA !== "" || m.sB !== ""));
+  
   existingRounds.forEach(r => r.forEach(m => [...m.tA, ...m.tB].forEach(p => { if(playCounts[p] !== undefined) playCounts[p]++; })));
+  
   let newRounds = [...existingRounds];
-  for (let r = newRounds.length; r < 20; r++) {
+  for (let r = newRounds.length; r < 15; r++) {
     let pool = [...activePlayers].sort((a,b) => playCounts[a] - playCounts[b] || Math.random() - 0.5);
     let matches = [];
     for (let c = 0; c < courts; c++) {
@@ -213,24 +249,25 @@ function generateFairRotation() {
 
 function renderPlayers() {
   document.getElementById("playersList").innerHTML = players.map((p, i) => `
-    <div class="flex items-center justify-between p-3 border rounded-2xl ${p.checkedIn ? 'bg-green-50' : 'bg-slate-50'}">
+    <div class="flex items-center justify-between p-4 border rounded-2xl ${p.checkedIn ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'}">
       <span class="text-sm font-bold uppercase ${p.checkedIn ? 'text-green-700' : 'text-slate-400'}">${p.name}</span>
-      ${isAdmin ? `<button onclick="toggleCheckIn(${i})" class="text-[10px] font-bold px-3 py-1 rounded-lg bg-white border">Check In</button>` : `<span class="text-[9px] font-black uppercase text-slate-400">${p.checkedIn ? 'Ready' : 'Pending'}</span>`}
+      ${isAdmin ? `<button onclick="toggleCheckIn(${i})" class="text-[10px] font-bold px-4 py-1 rounded-lg bg-white border shadow-sm">Check In</button>` : `<span class="text-[9px] font-black uppercase ${p.checkedIn ? 'text-green-600' : 'text-slate-300'}">${p.checkedIn ? 'Ready' : 'Pending'}</span>`}
     </div>`).join("");
 }
 
 function renderAllRounds() {
   const container = document.getElementById("allRoundsContainer"); container.innerHTML = "";
   allRounds.forEach((r, i) => {
-    let html = `<div class="space-y-4"><div class="text-[10px] font-black text-slate-300 uppercase text-center">Round ${i+1}</div>`;
+    let html = `<div class="space-y-4"><div class="flex items-center gap-3"><div class="h-[1px] flex-1 bg-slate-100"></div><span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Round ${i+1}</span><div class="h-[1px] flex-1 bg-slate-100"></div></div>`;
     r.forEach((m, j) => {
       html += `
-        <div class="match-card flex gap-4 items-center">
+        <div class="match-card flex gap-4 items-center shadow-sm">
           <button onclick="selectWinner(${i},${j},'A')" class="team-btn ${m.sA === "1" ? 'winner' : ''}">
-            <span class="block text-xs uppercase">${m.tA[0]} & ${m.tA[1]}</span>
+            <span class="block text-[11px] uppercase">${m.tA[0]} & ${m.tA[1]}</span>
           </button>
+          <div class="text-[9px] font-black text-slate-200">VS</div>
           <button onclick="selectWinner(${i},${j},'B')" class="team-btn ${m.sB === "1" ? 'winner' : ''}">
-            <span class="block text-xs uppercase">${m.tB[0]} & ${m.tB[1]}</span>
+            <span class="block text-[11px] uppercase">${m.tB[0]} & ${m.tB[1]}</span>
           </button>
         </div>`;
     });
@@ -245,12 +282,24 @@ function renderLeaderboard() {
     if(m.sB === "1") { m.tB.forEach(p=>{if(s[p]){s[p].pts+=3; s[p].w++}}); m.tA.forEach(p=>{if(s[p])s[p].l++}); }
   }));
   let sorted = Object.entries(s).sort((a,b) => b[1].pts - a[1].pts);
-  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `<tr><td class="py-5 px-6 font-black text-slate-300 text-xs">#0${i+1}</td><td class="py-5 font-bold uppercase text-xs">${n}</td><td class="py-5 text-center text-[10px] font-bold text-slate-400">${v.w}W-${v.l}L</td><td class="py-5 text-right px-6 font-black text-blue-600">${v.pts}</td></tr>`).join("");
+  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `
+    <tr>
+      <td class="py-6 px-6 font-black text-slate-300 text-xs">#0${i+1}</td>
+      <td class="py-6 font-bold uppercase text-xs text-slate-800">${n}</td>
+      <td class="py-6 text-center text-[11px] font-bold text-slate-400">${v.w}W - ${v.l}L</td>
+      <td class="py-6 text-right px-6 font-black text-blue-600 text-lg">${v.pts}</td>
+    </tr>`).join("");
 }
 
 function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds, registeredIPs }); }
-function masterReset() { if(confirm("Reset arena?")) { db.ref("tournaments/" + meetId).set(null); location.href = location.origin + location.pathname; } }
-function copyLink() { navigator.clipboard.writeText(window.location.href); alert("Link Copied!"); }
+function masterReset() { if(confirm("Confirm WIPE? This cannot be undone.")) { db.ref("tournaments/" + meetId).set(null); location.href = location.origin + location.pathname; } }
+function copyLink() { 
+    const el = document.getElementById("shareLink"); 
+    el.select(); 
+    document.execCommand('copy'); 
+    document.getElementById("copyBtn").innerText = "COPIED!";
+    setTimeout(() => document.getElementById("copyBtn").innerText = "Copy Link", 2000);
+}
 
 loadArena();
 </script>
