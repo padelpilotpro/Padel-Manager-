@@ -13,83 +13,79 @@
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
     body { background: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; color: #0f172a; }
     .glass-card { background: white; border-radius: 28px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.05); }
-    .match-card { background: white; border-radius: 24px; padding: 24px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; }
-    .team-block { width: 38%; text-align: center; font-size: 16px; font-weight: 700; color: #1e293b; text-transform: uppercase; }
-    .score-input { width: 60px; height: 50px; text-align: center; font-size: 20px; font-weight: 800; border: 2px solid #f1f5f9; border-radius: 12px; background: #f8fafc; }
+    .match-card { background: white; border-radius: 24px; padding: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; margin-bottom: 12px; }
+    .team-block { width: 35%; text-align: center; font-size: 14px; font-weight: 700; color: #1e293b; text-transform: uppercase; line-height: 1.2; }
+    .score-input { width: 50px; height: 45px; text-align: center; font-size: 18px; font-weight: 800; border: 2px solid #f1f5f9; border-radius: 10px; background: #f8fafc; }
     .locked-input { background-color: #f1f5f9 !important; color: #94a3b8; cursor: not-allowed; }
+    .status-badge { font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 99px; text-transform: uppercase; }
   </style>
 </head>
 <body>
 
-<div class="max-w-xl mx-auto px-5 py-8 space-y-8">
+<div class="max-w-xl mx-auto px-5 py-8 space-y-6">
 
-  <div class="text-center py-4">
+  <div class="text-center">
     <div class="text-4xl font-black tracking-tighter text-slate-900">PADELPILOT <span class="text-blue-600">ARENA</span></div>
-    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block">Edit Mode Active</div>
+    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase tracking-widest mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block">Admin Mode</div>
   </div>
 
   <section class="glass-card space-y-4">
-    <h3 class="text-slate-800 font-extrabold text-lg">Arena Setup</h3>
+    <div class="flex justify-between items-center"><h3 class="text-slate-800 font-extrabold">Tournament Details</h3></div>
     <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Tournament Name">
     <div class="grid grid-cols-2 gap-4">
       <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Location">
       <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none">
     </div>
-    <button id="updateBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition active:scale-95">Save & Lock Details</button>
+    <button id="updateBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition active:scale-95">Save Tournament</button>
   </section>
-
-  <div id="shareSection" class="glass-card hidden">
-    <label class="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Invite Players</label>
-    <div class="flex gap-2">
-      <input id="shareLink" class="flex-1 p-3 border rounded-xl text-xs bg-slate-50 font-mono text-slate-500 overflow-hidden text-ellipsis" readonly />
-      <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold">Copy Link</button>
-    </div>
-  </div>
 
   <div class="space-y-3">
     <div class="flex gap-2">
-      <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg shadow-sm outline-none focus:ring-2 ring-blue-100" placeholder="Your Name">
-      <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold shadow-lg shadow-blue-100 transition active:scale-95">Join</button>
+      <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg shadow-sm outline-none" placeholder="Player Name">
+      <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold shadow-lg transition active:scale-95">Join</button>
     </div>
+    
     <div class="glass-card">
       <div class="font-bold text-xs text-slate-400 uppercase tracking-tighter mb-4 flex justify-between items-center">
-        Live Roster <span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-md"><span id="playerCount">0</span> Players</span>
+        Registration & Check-In
+        <span class="bg-blue-50 text-blue-600 px-2 py-1 rounded-md"><span id="activeCount">0</span> Ready / <span id="playerCount">0</span> Total</span>
       </div>
-      <div id="playersList" class="flex flex-wrap gap-2"></div>
+      <div id="playersList" class="space-y-2"></div>
     </div>
   </div>
 
   <div class="glass-card space-y-4 text-center border-orange-100">
     <div class="flex justify-between items-center">
-      <label class="font-bold text-slate-700">Courts</label>
+      <label class="font-bold text-slate-700">Available Courts</label>
       <input id="courtsInput" type="number" min="1" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50">
     </div>
-    <button onclick="generate20Rounds()" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-5 rounded-2xl font-black text-lg shadow-lg shadow-orange-100 transition active:scale-95">
-      GENERATE MATCHES
+    <button onclick="generateFairRounds()" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-5 rounded-2xl font-black text-lg shadow-lg active:scale-95">
+      GENERATE ALL ROUNDS
     </button>
+    <p class="text-[10px] text-slate-400 font-medium">Only "Checked-In" players will be included in matches.</p>
   </div>
 
   <div id="allRoundsContainer" class="space-y-10"></div>
-  <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden">
-    <div class="p-6 border-b bg-slate-50/50"><h2 class="text-xl font-black text-slate-800 uppercase">Standings</h2></div>
+
+  <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden border-slate-200">
+    <div class="p-6 border-b bg-slate-50/50 font-black text-slate-800 uppercase">Current Standings</div>
     <table class="w-full">
       <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
         <tr><th class="py-4 px-6 text-left">Rank</th><th class="py-4 text-left">Player</th><th class="py-4 text-center">W-L</th><th class="py-4 text-right px-6">Points</th></tr>
       </thead>
-      <tbody id="leaderboardBody" class="divide-y divide-slate-100 font-medium text-slate-700"></tbody>
+      <tbody id="leaderboardBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
     </table>
   </div>
 
-  <div class="text-center py-12 space-y-4">
-    <button onclick="unlockDev()" class="text-[10px] text-slate-300 font-bold uppercase tracking-[0.4em] hover:text-slate-500">Developer Settings</button>
-    <div id="adminResetContainer" class="hidden">
-        <button onclick="masterReset()" class="text-[10px] text-red-400 font-bold uppercase border border-red-100 px-4 py-2 rounded-full hover:bg-red-50">Full Reset Arena</button>
+  <div class="text-center py-10">
+    <button onclick="unlockDev()" class="text-[10px] text-slate-300 font-bold uppercase tracking-widest hover:text-slate-500">Developer Access</button>
+    <div id="adminResetContainer" class="hidden mt-4">
+        <button onclick="masterReset()" class="text-[10px] text-red-400 font-bold uppercase border border-red-100 px-4 py-2 rounded-full hover:bg-red-50">Full Reset</button>
     </div>
   </div>
 </div>
 
 <script>
-// FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AiZaSyAKJywAbSKpKHqOs1a-_nQVBuQGkFmF4d4",
   authDomain: "padelpilot-b8e47.firebaseapp.com",
@@ -102,19 +98,14 @@ const DEV_PASSWORD = "padel-dev-123";
 
 let meetId = null, players = [], allRounds = [], registeredIPs = [], isAdmin = false, userIP = "";
 
-// Fetch IP for Lockdown
 fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => userIP = d.ip);
 
 function loadArena() {
   const params = new URLSearchParams(location.search);
   if (params.get("meet")) {
     meetId = params.get("meet");
-    document.getElementById("shareSection").classList.remove("hidden");
     db.ref("tournaments/" + meetId).on("value", snap => {
       const data = snap.val() || {};
-      if (data.createdAt && (Date.now() - data.createdAt > 24 * 60 * 60 * 1000)) {
-        db.ref("tournaments/" + meetId).set(null); location.reload(); return;
-      }
       players = data.players || [];
       allRounds = data.rounds || [];
       registeredIPs = data.registeredIPs || [];
@@ -125,7 +116,6 @@ function loadArena() {
         document.getElementById("tournamentTime").value = data.time || "";
         lockInputs(true);
       }
-      document.getElementById("shareLink").value = window.location.href;
       renderPlayers(); renderAllRounds(); renderLeaderboard();
     });
   }
@@ -140,114 +130,151 @@ function lockInputs(lock) {
   });
   const btn = document.getElementById("updateBtn");
   btn.disabled = lock;
-  btn.innerText = lock ? "Details Locked" : "Update Arena Details";
-  btn.style.opacity = lock ? "0.5" : "1";
+  btn.innerText = lock ? "Tournament Locked" : "Update Details";
+  btn.style.opacity = lock ? "0.6" : "1";
 }
 
 function unlockDev() {
-  if(prompt("Enter Dev Password:") === DEV_PASSWORD) {
+  if(prompt("Admin Password:") === DEV_PASSWORD) {
     isAdmin = true;
     document.getElementById("devIndicator").classList.remove("hidden");
     document.getElementById("adminResetContainer").classList.remove("hidden");
     lockInputs(false);
-    document.getElementById("updateBtn").innerText = "Update Arena (Admin Mode)";
     renderPlayers();
-    alert("Admin Mode Active: All locks removed.");
   }
+}
+
+function addPlayer() {
+  if(!meetId) return alert("Save tournament first.");
+  if(!isAdmin && registeredIPs.includes(userIP)) return alert("Already joined from this device.");
+  
+  const name = document.getElementById("playerInput").value.trim().toLowerCase();
+  if(!name || players.some(p => p.name === name)) return alert("Enter unique name.");
+  
+  players.push({ name: name, checkedIn: false });
+  if(!isAdmin) registeredIPs.push(userIP);
+  saveData();
+  document.getElementById("playerInput").value = "";
+}
+
+function toggleCheckIn(index) {
+  if(!isAdmin) return;
+  players[index].checkedIn = !players[index].checkedIn;
+  saveData();
+}
+
+function generateFairRounds() {
+  const activePlayers = players.filter(p => p.checkedIn).map(p => p.name);
+  const courts = parseInt(document.getElementById("courtsInput").value);
+  
+  if (activePlayers.length < 4) return alert("At least 4 checked-in players needed.");
+  if (!confirm(`Generate games for ${activePlayers.length} active players?`)) return;
+
+  allRounds = [];
+  let usage = {}; 
+  activePlayers.forEach(p => usage[p] = 0);
+
+  for (let r = 0; r < 10; r++) { // Generating 10 rounds for example
+    let pool = [...activePlayers].sort(() => Math.random() - 0.5);
+    let roundMatches = [];
+    
+    for (let c = 0; c < courts; c++) {
+      if (pool.length >= 4) {
+        let match = {
+          tA: [pool.shift(), pool.shift()],
+          tB: [pool.shift(), pool.shift()],
+          sA: "", sB: ""
+        };
+        roundMatches.push(match);
+      }
+    }
+    allRounds.push(roundMatches);
+  }
+  saveData();
+}
+
+function renderPlayers() {
+  const list = document.getElementById("playersList");
+  const active = players.filter(p => p.checkedIn).length;
+  document.getElementById("playerCount").innerText = players.length;
+  document.getElementById("activeCount").innerText = active;
+
+  list.innerHTML = players.map((p, i) => `
+    <div class="flex items-center justify-between p-3 border rounded-2xl ${p.checkedIn ? 'bg-green-50 border-green-100' : 'bg-slate-50'}">
+      <div class="flex flex-col">
+        <span class="text-sm font-bold uppercase ${p.checkedIn ? 'text-green-700' : 'text-slate-500'}">${p.name}</span>
+        <span class="status-badge ${p.checkedIn ? 'bg-green-200 text-green-800' : 'bg-slate-200 text-slate-500'}">
+          ${p.checkedIn ? 'Checked In' : 'Pending'}
+        </span>
+      </div>
+      ${isAdmin ? `<div class="flex gap-2">
+        <button onclick="toggleCheckIn(${i})" class="text-[10px] font-bold px-3 py-1 rounded-lg bg-white border shadow-sm">Toggle</button>
+        <button onclick="removePlayer(${i})" class="text-red-400 text-lg px-2">✕</button>
+      </div>` : ''}
+    </div>
+  `).join("");
+}
+
+function renderAllRounds() {
+  const container = document.getElementById("allRoundsContainer");
+  container.innerHTML = "";
+  allRounds.forEach((r, i) => {
+    let html = `<div class="space-y-4">
+      <div class="flex items-center gap-4"><div class="h-[1px] flex-1 bg-slate-200"></div>
+      <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Round ${i+1}</span>
+      <div class="h-[1px] flex-1 bg-slate-200"></div></div>`;
+    
+    r.forEach((m, j) => {
+      html += `
+        <div class="match-card shadow-sm">
+          <div class="team-block">${m.tA[0]}<br>${m.tA[1]}</div>
+          <div class="flex items-center gap-2">
+            <input class="score-input" value="${m.sA}" onchange="updateScore(${i},${j},'sA',this.value)">
+            <span class="text-[10px] font-black text-slate-200">VS</span>
+            <input class="score-input" value="${m.sB}" onchange="updateScore(${i},${j},'sB',this.value)">
+          </div>
+          <div class="team-block">${m.tB[0]}<br>${m.tB[1]}</div>
+        </div>`;
+    });
+    container.innerHTML += html + "</div>";
+  });
+}
+
+function updateScore(ri, mi, team, val) {
+  val = parseInt(val);
+  if(val !== 0 && val !== 1) return renderAllRounds();
+  allRounds[ri][mi][team] = val;
+  saveData();
+}
+
+function renderLeaderboard() {
+  let s = {}; players.forEach(p => s[p.name] = { w: 0, l: 0, pts: 0 });
+  allRounds.forEach(r => r.forEach(m => {
+    if(m.sA == 1) { m.tA.forEach(p=>{if(s[p]){s[p].w++; s[p].pts+=3}}); m.tB.forEach(p=>{if(s[p])s[p].l++}); }
+    if(m.sB == 1) { m.tB.forEach(p=>{if(s[p]){s[p].w++; s[p].pts+=3}}); m.tA.forEach(p=>{if(s[p])s[p].l++}); }
+  }));
+  let sorted = Object.entries(s).sort((a,b) => b[1].pts - a[1].pts);
+  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `
+    <tr><td class="py-5 px-6 font-black text-slate-300 text-xs">#0${i+1}</td>
+    <td class="py-5 font-bold uppercase text-xs">${n}</td>
+    <td class="py-5 text-center text-[10px] font-bold text-slate-400">${v.w}W - ${v.l}L</td>
+    <td class="py-5 text-right px-6 font-black text-blue-600">${v.pts}</td></tr>
+  `).join("");
 }
 
 function createTournament() {
   const name = document.getElementById("tournamentName").value.trim();
   const loc = document.getElementById("tournamentLocation").value.trim();
   const time = document.getElementById("tournamentTime").value;
-  if(!name || !loc || !time) return alert("Complete all details.");
-  
+  if(!name) return alert("Enter tournament name.");
   meetId = name.replace(/\s+/g,'-').toLowerCase();
   history.pushState({}, '', "?meet=" + meetId);
-  db.ref("tournaments/" + meetId).update({
-    name, location: loc, time: time, createdAt: Date.now(), players, rounds: allRounds, registeredIPs: []
-  });
+  db.ref("tournaments/" + meetId).update({ name, location: loc, time: time, createdAt: Date.now(), players, rounds: allRounds, registeredIPs: [] });
 }
 
-function addPlayer() {
-  if(!meetId) return alert("Setup arena first.");
-  if(!isAdmin && registeredIPs.includes(userIP)) return alert("Access Denied: One player per device.");
-  
-  const name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!name || players.includes(name)) return alert("Enter a unique name.");
-  
-  players.push(name);
-  if(!isAdmin) registeredIPs.push(userIP);
-  db.ref("tournaments/" + meetId).update({ players, registeredIPs });
-  document.getElementById("playerInput").value = "";
-}
-
-function generate20Rounds() {
-  const setTime = document.getElementById("tournamentTime").value;
-  if (!isAdmin && setTime) {
-    const now = new Date();
-    const [h, m] = setTime.split(':');
-    const tDate = new Date(); tDate.setHours(h, m, 0);
-    if (now < tDate) return alert("Generation opens at " + setTime);
-  }
-
-  if (players.length < 4) return alert("Need 4 players.");
-  allRounds = []; let lastPlayed = {};
-  for(let r=0; r<20; r++) {
-    let pool = [...players];
-    for(let i=pool.length-1; i>0; i--){ let j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-    pool.sort((a,b)=>(lastPlayed[a]===r-1?1:0)-(lastPlayed[b]===r-1?1:0));
-    let matches=[];
-    for(let c=0; c<parseInt(document.getElementById("courtsInput").value); c++) {
-      if(pool.length<4) break;
-      let p1=pool.shift(),p2=pool.shift(),p3=pool.shift(),p4=pool.shift();
-      matches.push({tA:[p1,p2],tB:[p3,p4],sA:"",sB:""}); [p1,p2,p3,p4].forEach(p=>lastPlayed[p]=r);
-    }
-    allRounds.push(matches);
-  }
-  saveData();
-}
-
-function removePlayer(i) { if(isAdmin && confirm("Remove?")) { players.splice(i,1); saveData(); } }
+function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds, registeredIPs }); }
+function removePlayer(i) { if(isAdmin && confirm("Remove?")) { players.splice(i, 1); saveData(); } }
 function masterReset() { if(confirm("Wipe arena?")) { db.ref("tournaments/" + meetId).set(null); location.href = location.origin + location.pathname; } }
-function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds }); }
-function copyLink() {
-  const el = document.getElementById("shareLink"); el.select(); document.execCommand('copy');
-  document.getElementById("copyBtn").innerText = "COPIED!"; setTimeout(() => document.getElementById("copyBtn").innerText = "Copy Link", 2000);
-}
-
-function renderPlayers() {
-  document.getElementById("playerCount").innerText = players.length;
-  document.getElementById("playersList").innerHTML = players.map((p, i) => `
-    <div class="bg-blue-50 border border-blue-100 pl-4 pr-2 py-2 rounded-full flex items-center gap-2 shadow-sm">
-      <span class="text-[11px] font-bold uppercase text-blue-600">${p}</span>
-      ${isAdmin ? `<button onclick="removePlayer(${i})" class="w-5 h-5 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-[10px] font-bold">✕</button>` : ''}
-    </div>`).join("");
-}
-
-function renderAllRounds() {
-  const container = document.getElementById("allRoundsContainer"); container.innerHTML = "";
-  allRounds.forEach((r, i) => {
-    let html = `<div class="space-y-4"><div class="flex items-center gap-4"><div class="h-[1px] flex-1 bg-slate-200"></div><span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Round ${i+1}</span><div class="h-[1px] flex-1 bg-slate-200"></div></div>`;
-    r.forEach((m, j) => { html += `<div class="match-card shadow-sm border-slate-100"><div class="team-block text-slate-800">${m.tA[0]}<br>${m.tA[1]}</div><div class="flex items-center gap-2"><input class="score-input" value="${m.sA}" onchange="updateScore(${i},${j},'sA',this.value)"><span class="text-[9px] font-black text-slate-300">VS</span><input class="score-input" value="${m.sB}" onchange="updateScore(${i},${j},'sB',this.value)"></div><div class="team-block text-slate-800">${m.tB[0]}<br>${m.tB[1]}</div></div>`; });
-    container.innerHTML += html + "</div>";
-  });
-}
-
-function updateScore(ri, mi, team, val) {
-  val=parseInt(val); if(val!==0 && val!==1) return renderAllRounds();
-  allRounds[ri][mi][team]=val; saveData();
-}
-
-function renderLeaderboard() {
-  let s={}; players.forEach(p=>s[p]={w:0,l:0,pts:0});
-  allRounds.forEach(r=>r.forEach(m=>{
-    if(m.sA==1){m.tA.forEach(p=>{s[p].w++;s[p].pts+=3});m.tB.forEach(p=>s[p].l++)}
-    if(m.sB==1){m.tB.forEach(p=>{s[p].w++;s[p].pts+=3});m.tA.forEach(p=>s[p].l++)}
-  }));
-  let sorted=Object.entries(s).sort((a,b)=>b[1].pts-a[1].pts);
-  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v],i)=>`<tr><td class="py-5 px-6 font-black text-slate-300 text-xs">#0${i+1}</td><td class="py-5 font-bold uppercase text-xs">${n}</td><td class="py-5 text-center text-[10px] font-bold text-slate-400">${v.w}W-${v.l}L</td><td class="py-5 text-right px-6 font-black text-blue-600">${v.pts}</td></tr>`).join("");
-}
 
 loadArena();
 </script>
