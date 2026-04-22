@@ -1,75 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PadelPilot - Leaderboard</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <title>Live Standings | PadelPilot</title>
 </head>
-<body class="bg-gray-50">
-
-<div class="top-tabs bg-gradient-to-r from-blue-700 to-indigo-600 text-white p-4 flex justify-center gap-10 font-bold">
-  <a href="index.html">ARENA</a>
-  <a href="leaderboard.html" class="active">LEADERBOARD</a>
-</div>
-
-<div class="max-w-4xl mx-auto p-6">
-  <div class="text-center mb-10">
-    <h1 class="text-4xl font-black">Leaderboard</h1>
-    <p id="tournamentTitle" class="text-gray-500 mt-2"></p>
+<body class="bg-slate-900 text-white p-10">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-5xl font-black mb-10 text-center">LIVE <span class="text-blue-500">STANDINGS</span></h1>
+    
+    <div class="bg-slate-800 rounded-[40px] overflow-hidden border border-slate-700 shadow-2xl">
+      <table class="w-full text-left">
+        <thead class="bg-slate-700/50 text-slate-400 uppercase text-sm font-bold">
+          <tr>
+            <th class="p-8">Rank</th>
+            <th>Player</th>
+            <th class="text-center">Record</th>
+            <th class="text-right p-8">Points</th>
+          </tr>
+        </thead>
+        <tbody id="liveLeaderboard" class="text-2xl font-bold">
+          </tbody>
+      </table>
+    </div>
   </div>
 
-  <div id="leaderboardContainer" class="bg-white rounded-3xl shadow-sm p-6"></div>
-</div>
+  <script>
+    // USE THE SAME CONFIG FROM YOUR ARENA PAGE
+    const firebaseConfig = {
+      apiKey: "AiZaSyAKJywAbSKpKHqOs1a-_nQVBuQGkFmF4d4",
+      authDomain: "padelpilot-b8e47.firebaseapp.com",
+      databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
+      projectId: "padelpilot-b8e47"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-<script>
-const firebaseConfig = { /* same as index.html */ 
-  apiKey: "AIzaSyAw5Y0Z8THy2guZ8BK7Q0D5LkHNeP9",
-  authDomain: "padelpilot-b8e47.firebaseapp.com",
-  databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
-  projectId: "padelpilot-b8e47",
-  storageBucket: "padelpilot-b8e47.appspot.com",
-  messagingSenderId: "1047531628612",
-  appId: "1:1047531628612:web:0ee8f8bd27113c41f9c"
-};
+    // Get the tournament ID from the URL (e.g., leaderboard.html?meet=my-tournament)
+    const params = new URLSearchParams(location.search);
+    const meetId = params.get("meet");
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-const params = new URLSearchParams(window.location.search);
-const meetId = params.get("meet");
-
-if (meetId) {
-  db.ref("tournaments/" + meetId).on("value", (snap) => {
-    const data = snap.val() || {};
-    document.getElementById("tournamentTitle").textContent = data.name || "Padel Tournament";
-
-    let html = `<div class="text-lg font-semibold mb-6">Current Standings</div>`;
-    html += `<div class="space-y-3">`;
-
-    (data.players || []).forEach((player, i) => {
-      let wins = 0;
-      (data.matches || []).forEach(m => {
-        const scoreA = parseFloat(m.scoreA) || 0;
-        const scoreB = parseFloat(m.scoreB) || 0;
-        if (m.teamA.includes(player) && scoreA > scoreB) wins++;
-        if (m.teamB.includes(player) && scoreB > scoreA) wins++;
+    if (meetId) {
+      db.ref("tournaments/" + meetId).on("value", snap => {
+        const data = snap.val() || {};
+        const players = data.players || [];
+        const allRounds = data.rounds || [];
+        render(players, allRounds);
       });
+    }
 
-      html += `
-        <div class="flex items-center justify-between bg-gray-50 px-6 py-4 rounded-2xl">
-          <span class="font-medium">${i+1}. ${player.charAt(0).toUpperCase() + player.slice(1)}</span>
-          <span class="text-blue-600 font-bold">${wins} wins</span>
-        </div>`;
-    });
-    html += `</div>`;
-    document.getElementById("leaderboardContainer").innerHTML = html;
-  });
-} else {
-  document.getElementById("leaderboardContainer").innerHTML = `<div class="text-center py-12 text-gray-400">No tournament loaded. Go back to Arena.</div>`;
-}
-</script>
+    function render(players, allRounds) {
+      let stats = {};
+      players.forEach(p => stats[p.name] = { w: 0, l: 0, pts: 0 });
+
+      allRounds.forEach(r => r.forEach(m => {
+        if(m.sA === "1") { 
+            m.tA.forEach(p => { if(stats[p]) { stats[p].pts += 3; stats[p].w++; } });
+            m.tB.forEach(p => { if(stats[p]) stats[p].l++; });
+        }
+        if(m.sB === "1") { 
+            m.tB.forEach(p => { if(stats[p]) { stats[p].pts += 3; stats[p].w++; } });
+            m.tA.forEach(p => { if(stats[p]) stats[p].l++; });
+        }
+      }));
+
+      const sorted = Object.entries(stats).sort((a,b) => b[1].pts - a[1].pts);
+      document.getElementById("liveLeaderboard").innerHTML = sorted.map(([name, v], i) => `
+        <tr class="border-b border-slate-700">
+          <td class="p-8 text-slate-500">#${i+1}</td>
+          <td class="uppercase">${name}</td>
+          <td class="text-center text-slate-400">${v.w}W - ${v.l}L</td>
+          <td class="p-8 text-right text-blue-400 text-4xl">${v.pts}</td>
+        </tr>
+      `).join("");
+    }
+  </script>
 </body>
 </html>
