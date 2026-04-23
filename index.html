@@ -3,28 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PadelPilot Arena | Pro</title>
-
+  <title>PadelPilot Arena | Pro Hub</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
     body { background: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; color: #0f172a; }
-    .glass-card { background: white; border-radius: 28px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.05); }
-    .match-card { background: white; border-radius: 24px; padding: 20px; border: 1px solid #e2e8f0; }
-    .team-btn { flex: 1; padding: 12px; border-radius: 16px; border: 2px solid #f1f5f9; transition: all 0.2s; text-align: center; cursor: pointer; }
-    .team-btn.winner { background: #eff6ff; border-color: #3b82f6; }
-    .team-btn.winner span { color: #1d4ed8; font-weight: 800; }
-    .nav-tab { flex: 1; text-align: center; padding: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; border-radius: 14px; transition: all 0.3s; color: #94a3b8; }
+    .glass-card { background: white; border-radius: 28px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.03); }
+    .match-card { background: white; border-radius: 24px; padding: 20px; border: 1px solid #e2e8f0; transition: all 0.3s; }
+    .match-active { border-color: #3b82f6; background: #f0f7ff; ring: 4px ring-blue-50; }
+    .team-btn { flex: 1; padding: 12px; border-radius: 16px; border: 2px solid #f1f5f9; text-align: center; cursor: pointer; background: white; transition: transform 0.1s; }
+    .team-btn:active { transform: scale(0.95); }
+    .team-btn.winner { background: #22c55e; border-color: #16a34a; color: white; }
+    .nav-tab { flex: 1; text-align: center; padding: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; border-radius: 14px; color: #94a3b8; }
     .nav-tab.active { background: white; color: #3b82f6; box-shadow: 0 4px 12px -2px rgb(59 130 246 / 0.15); }
-    .locked-field { background-color: #f1f5f9 !important; color: #64748b !important; cursor: not-allowed; border-color: #e2e8f0 !important; }
+    .status-pill { font-size: 10px; font-weight: 800; padding: 4px 12px; border-radius: 99px; text-transform: uppercase; }
   </style>
 </head>
 <body>
 
-<div class="sticky top-0 z-50 bg-slate-50/90 backdrop-blur-md px-5 py-4 border-b border-slate-100">
+<div class="sticky top-0 z-50 bg-slate-50/90 backdrop-blur-md px-5 py-4 border-b">
   <div class="max-w-xl mx-auto flex bg-slate-200/50 p-1 rounded-2xl">
     <button onclick="switchTab('arena')" id="tab-arena" class="nav-tab active">Arena Hub</button>
     <button onclick="switchTab('stats')" id="tab-stats" class="nav-tab">Standings</button>
@@ -32,73 +31,52 @@
 </div>
 
 <div class="max-w-xl mx-auto px-5 py-6 space-y-8">
-
-  <div class="text-center">
-    <div class="text-4xl font-black tracking-tighter text-slate-900">PADELPILOT <span class="text-blue-600">ARENA</span></div>
-    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block tracking-widest">Admin Access Granted</div>
-  </div>
-
   <div id="view-arena" class="space-y-8">
     
-    <section class="glass-card space-y-4">
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Tournament Details</div>
+    <section id="setupArea" class="glass-card space-y-4">
       <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none font-bold" placeholder="Tournament Name">
-      <div class="grid grid-cols-2 gap-4">
-        <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Location">
-        <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none">
-      </div>
-      <button id="updateBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition active:scale-95">Save & Lock Arena</button>
+      <button onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">Initialize Arena</button>
     </section>
 
-    <div id="shareSection" class="glass-card hidden space-y-3">
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Invite Players</div>
-      <div class="flex gap-2">
-        <input id="shareLink" class="flex-1 p-3 border rounded-xl text-[10px] bg-slate-50 font-mono text-slate-400 truncate" readonly />
-        <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold whitespace-nowrap">Copy Link</button>
+    <div class="glass-card">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-black uppercase text-xs tracking-widest text-slate-400">Registered Players (<span id="totalRegCount">0</span>)</h3>
       </div>
+      <div class="flex gap-2 mb-4">
+        <input id="playerInput" class="flex-1 p-4 border rounded-xl outline-none focus:border-blue-400" placeholder="New Player Name">
+        <button onclick="addPlayer()" class="bg-blue-600 text-white px-6 rounded-xl font-bold">Add</button>
+      </div>
+      <div id="playersList" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
     </div>
 
-    <div class="space-y-3">
-      <div class="flex gap-2">
-        <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg outline-none focus:ring-2 ring-blue-100" placeholder="Your Name">
-        <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold shadow-lg shadow-blue-100">Join</button>
+    <div class="glass-card border-slate-100">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-black uppercase text-xs tracking-widest text-blue-500">The Waiting Bench</h3>
+        <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase"><span id="benchCount">0</span> Resting</span>
       </div>
-      <div class="glass-card">
-        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Checked-In Players</div>
-        <div id="playersList" class="space-y-2"></div>
-      </div>
+      <div id="benchList" class="grid grid-cols-2 gap-2">
+        </div>
     </div>
 
-    <div class="glass-card space-y-4 text-center border-orange-100 shadow-orange-50/50 shadow-lg">
-      <div class="flex justify-between items-center px-2">
-        <label class="font-bold text-slate-700">Courts Available</label>
-        <input id="courtsInput" type="number" min="1" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50 border-orange-200">
+    <div class="glass-card space-y-4 border-orange-100 shadow-lg shadow-orange-50">
+      <div class="flex justify-between items-center">
+        <label class="font-bold text-slate-600">Courts Available</label>
+        <input id="courtsInput" type="number" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50">
       </div>
-      <button onclick="generateFairRotation()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg shadow-md transition active:scale-95">ROTATE & ASSIGN PLAYERS</button>
+      <button onclick="smartRotate()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg shadow-md uppercase">Generate Next Rotation</button>
     </div>
 
-    <div id="allRoundsContainer" class="space-y-10 pb-10"></div>
+    <div id="allRoundsContainer" class="space-y-6 pb-20"></div>
   </div>
 
-  <div id="view-stats" class="hidden space-y-6">
-    <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden border-slate-200">
-      <div class="p-8 border-b bg-slate-50/50"><h2 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">Current Ranking</h2></div>
+  <div id="view-stats" class="hidden">
+    <div class="bg-white border rounded-[32px] overflow-hidden">
+      <div class="p-8 bg-slate-50 border-b font-black uppercase text-center tracking-widest">Tournament Rankings</div>
       <table class="w-full">
-        <thead class="bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
-          <tr><th class="py-4 px-6 text-left">Rank</th><th class="py-4 text-left">Player</th><th class="py-4 text-center">W-L</th><th class="py-4 text-right px-6">Pts</th></tr>
-        </thead>
         <tbody id="leaderboardBody" class="divide-y divide-slate-100"></tbody>
       </table>
     </div>
   </div>
-
-  <div class="text-center py-10 border-t border-slate-100 mt-20">
-    <button onclick="unlockDev()" class="text-[10px] text-slate-300 font-bold uppercase tracking-[0.4em] hover:text-blue-400 transition">Developer Key</button>
-    <div id="adminResetContainer" class="hidden mt-6 flex justify-center gap-4">
-        <button onclick="masterReset()" class="text-[10px] text-red-400 font-bold uppercase border border-red-100 px-6 py-2 rounded-full hover:bg-red-50">Wipe Tournament</button>
-    </div>
-  </div>
-
 </div>
 
 <script>
@@ -108,198 +86,184 @@ const firebaseConfig = {
   databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
   projectId: "padelpilot-b8e47"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const DEV_PASSWORD = "padel-dev-123";
 
-let meetId = null, players = [], allRounds = [], registeredIPs = [], isAdmin = false, userIP = "";
-fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => userIP = d.ip);
+let meetId = null, players = [], allRounds = [];
 
-function switchTab(target) {
-  document.getElementById('view-arena').classList.add('hidden');
-  document.getElementById('view-stats').classList.add('hidden');
-  document.getElementById('tab-arena').classList.remove('active');
-  document.getElementById('tab-stats').classList.remove('active');
-  document.getElementById('view-' + target).classList.remove('hidden');
-  document.getElementById('tab-' + target).classList.add('active');
+function switchTab(t) {
+  document.getElementById('view-arena').classList.toggle('hidden', t!=='arena');
+  document.getElementById('view-stats').classList.toggle('hidden', t!=='stats');
+  document.getElementById('tab-arena').classList.toggle('active', t==='arena');
+  document.getElementById('tab-stats').classList.toggle('active', t==='stats');
 }
 
 function loadArena() {
   const params = new URLSearchParams(location.search);
   if (params.get("meet")) {
     meetId = params.get("meet");
-    document.getElementById("shareSection").classList.remove("hidden");
-    document.getElementById("shareLink").value = window.location.href;
-
+    document.getElementById("setupArea").classList.add("hidden");
     db.ref("tournaments/" + meetId).on("value", snap => {
       const data = snap.val() || {};
       players = data.players || [];
       allRounds = data.rounds || [];
-      registeredIPs = data.registeredIPs || [];
-
-      // DYNAMIC LOCKING LOGIC
-      if(data.name) {
-          document.getElementById("tournamentName").value = data.name;
-          document.getElementById("tournamentLocation").value = data.location || "";
-          document.getElementById("tournamentTime").value = data.time || "";
-          
-          if(!isAdmin) {
-              applyFieldLock(true);
-          } else {
-              applyFieldLock(false);
-          }
-      }
-      renderPlayers(); renderAllRounds(); renderLeaderboard();
+      renderAll();
     });
   }
 }
 
-function applyFieldLock(lock) {
-    const ids = ["tournamentName", "tournamentLocation", "tournamentTime"];
-    ids.forEach(id => {
-        const el = document.getElementById(id);
-        el.readOnly = lock;
-        lock ? el.classList.add("locked-field") : el.classList.remove("locked-field");
-    });
-    const btn = document.getElementById("updateBtn");
-    btn.disabled = lock;
-    btn.innerText = lock ? "Tournament Locked" : "Save Arena Details";
-    btn.style.opacity = lock ? "0.5" : "1";
-}
-
-function unlockDev() {
-  if(prompt("Enter Admin Pass:") === DEV_PASSWORD) {
-    isAdmin = true;
-    document.getElementById("devIndicator").classList.remove("hidden");
-    document.getElementById("adminResetContainer").classList.remove("hidden");
-    applyFieldLock(false);
+function renderAll() {
     renderPlayers();
-  }
-}
-
-function createTournament() {
-  const name = document.getElementById("tournamentName").value.trim();
-  if(!name) return alert("Missing name");
-  meetId = name.replace(/\s+/g,'-').toLowerCase();
-  
-  db.ref("tournaments/" + meetId).update({ 
-      name, 
-      location: document.getElementById("tournamentLocation").value, 
-      time: document.getElementById("tournamentTime").value, 
-      createdAt: Date.now() 
-  }).then(() => {
-      history.pushState({}, '', "?meet=" + meetId);
-      document.getElementById("shareSection").classList.remove("hidden");
-      document.getElementById("shareLink").value = window.location.href;
-  });
+    renderBench();
+    renderAllRounds();
+    renderLeaderboard();
 }
 
 function addPlayer() {
-  if(!meetId) return alert("Save arena details first!");
-  if(!isAdmin && registeredIPs.includes(userIP)) return alert("You have already joined from this phone.");
-  
   const name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!name || players.some(p => p.name === name)) return alert("Unique name needed.");
-  
-  players.push({ name, checkedIn: false });
-  if(!isAdmin) registeredIPs.push(userIP);
+  if(!name || players.some(p => p.name === name)) return;
+  players.push({ name, checkedIn: true, gamesPlayed: 0 });
   saveData();
   document.getElementById("playerInput").value = "";
 }
 
-function toggleCheckIn(i) {
-  if(!isAdmin) return;
-  players[i].checkedIn = !players[i].checkedIn;
-  saveData();
+function toggleMatch(ri, mi) {
+    const match = allRounds[ri][mi];
+    if (match.status === "waiting") match.status = "playing";
+    saveData();
 }
 
 function selectWinner(ri, mi, team) {
-  allRounds[ri][mi].sA = (team === 'A') ? "1" : "0";
-  allRounds[ri][mi].sB = (team === 'B') ? "1" : "0";
+  const match = allRounds[ri][mi];
+  match.sA = (team === 'A') ? "1" : "0";
+  match.sB = (team === 'B') ? "1" : "0";
+  match.status = "finished";
+  
+  [...match.tA, ...match.tB].forEach(pName => {
+      const p = players.find(x => x.name === pName);
+      if(p) p.gamesPlayed = (p.gamesPlayed || 0) + 1;
+  });
   saveData();
 }
 
-function generateFairRotation() {
-  const activePlayers = players.filter(p => p.checkedIn).map(p => p.name);
+function smartRotate() {
+  const activePlayers = players.map(p => p.name);
   const courts = parseInt(document.getElementById("courtsInput").value);
-  if (activePlayers.length < 4) return alert("Need at least 4 ready players.");
   
-  let playCounts = {}; activePlayers.forEach(p => playCounts[p] = 0);
-  let existingRounds = allRounds.filter(r => r.some(m => m.sA !== "" || m.sB !== ""));
-  
-  existingRounds.forEach(r => r.forEach(m => [...m.tA, ...m.tB].forEach(p => { if(playCounts[p] !== undefined) playCounts[p]++; })));
-  
-  let newRounds = [...existingRounds];
-  for (let r = newRounds.length; r < 15; r++) {
-    let pool = [...activePlayers].sort((a,b) => playCounts[a] - playCounts[b] || Math.random() - 0.5);
-    let matches = [];
-    for (let c = 0; c < courts; c++) {
-      if (pool.length >= 4) {
-        let p1 = pool.shift(), p2 = pool.shift(), p3 = pool.shift(), p4 = pool.shift();
-        matches.push({ tA: [p1, p2], tB: [p3, p4], sA: "", sB: "" });
-        [p1, p2, p3, p4].forEach(p => playCounts[p]++);
+  let updatedRounds = allRounds.filter(r => r.some(m => m.status === "finished" || m.status === "playing"));
+  let busyPlayers = [];
+  updatedRounds.forEach(r => r.forEach(m => {
+      if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB);
+  }));
+
+  let available = activePlayers.filter(p => !busyPlayers.includes(p));
+  available.sort((a,b) => {
+      const pA = players.find(x => x.name === a);
+      const pB = players.find(x => x.name === b);
+      return (pA.gamesPlayed || 0) - (pB.gamesPlayed || 0);
+  });
+
+  if (available.length < 4) return alert("Not enough free players!");
+
+  let newMatches = [];
+  for(let i=0; i < courts; i++) {
+      if(available.length >= 4) {
+          newMatches.push({
+              tA: [available.shift(), available.shift()],
+              tB: [available.shift(), available.shift()],
+              sA: "", sB: "", status: "waiting"
+          });
       }
-    }
-    newRounds.push(matches);
   }
-  allRounds = newRounds;
+  
+  if(newMatches.length > 0) updatedRounds.push(newMatches);
+  allRounds = updatedRounds;
   saveData();
 }
 
 function renderPlayers() {
+  document.getElementById("totalRegCount").innerText = players.length;
   document.getElementById("playersList").innerHTML = players.map((p, i) => `
-    <div class="flex items-center justify-between p-4 border rounded-2xl ${p.checkedIn ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'}">
-      <span class="text-sm font-bold uppercase ${p.checkedIn ? 'text-green-700' : 'text-slate-400'}">${p.name}</span>
-      ${isAdmin ? `<button onclick="toggleCheckIn(${i})" class="text-[10px] font-bold px-4 py-1 rounded-lg bg-white border shadow-sm">Check In</button>` : `<span class="text-[9px] font-black uppercase ${p.checkedIn ? 'text-green-600' : 'text-slate-300'}">${p.checkedIn ? 'Ready' : 'Pending'}</span>`}
+    <div class="flex items-center justify-between p-3 border rounded-xl bg-slate-50 border-slate-100">
+      <span class="text-sm font-bold uppercase text-slate-700">${p.name} <small class="text-slate-400 font-normal ml-2">${p.gamesPlayed || 0} Games</small></span>
+      <button onclick="removePlayer(${i})" class="text-red-300 hover:text-red-500 text-xs font-bold px-2">Remove</button>
     </div>`).join("");
+}
+
+function renderBench() {
+    let busyPlayers = [];
+    allRounds.forEach(r => r.forEach(m => {
+        if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB);
+    }));
+
+    const resting = players.filter(p => !busyPlayers.includes(p));
+    document.getElementById("benchCount").innerText = resting.length;
+    
+    document.getElementById("benchList").innerHTML = resting.length > 0 
+        ? resting.map(p => `
+            <div class="bg-blue-50/50 border border-blue-100 p-3 rounded-2xl text-center">
+                <div class="text-[10px] font-black uppercase text-blue-600 truncate">${p.name}</div>
+                <div class="text-[8px] font-bold text-blue-300 uppercase">Available</div>
+            </div>`).join("")
+        : `<div class="col-span-2 text-center text-[10px] py-4 text-slate-300 uppercase font-bold tracking-widest">Everyone is playing</div>`;
 }
 
 function renderAllRounds() {
   const container = document.getElementById("allRoundsContainer"); container.innerHTML = "";
-  allRounds.forEach((r, i) => {
-    let html = `<div class="space-y-4"><div class="flex items-center gap-3"><div class="h-[1px] flex-1 bg-slate-100"></div><span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Round ${i+1}</span><div class="h-[1px] flex-1 bg-slate-100"></div></div>`;
-    r.forEach((m, j) => {
-      html += `
-        <div class="match-card flex gap-4 items-center shadow-sm">
-          <button onclick="selectWinner(${i},${j},'A')" class="team-btn ${m.sA === "1" ? 'winner' : ''}">
-            <span class="block text-[11px] uppercase">${m.tA[0]} & ${m.tA[1]}</span>
-          </button>
-          <div class="text-[9px] font-black text-slate-200">VS</div>
-          <button onclick="selectWinner(${i},${j},'B')" class="team-btn ${m.sB === "1" ? 'winner' : ''}">
-            <span class="block text-[11px] uppercase">${m.tB[0]} & ${m.tB[1]}</span>
-          </button>
+  allRounds.slice().reverse().forEach((r, riInv) => {
+    const ri = allRounds.length - 1 - riInv;
+    r.forEach((m, mi) => {
+      const isPlaying = m.status === "playing";
+      const isFinished = m.status === "finished";
+      
+      container.innerHTML += `
+        <div class="match-card ${isPlaying ? 'match-active shadow-lg shadow-blue-100/50' : ''} space-y-4">
+          <div class="flex justify-between items-center">
+            <span class="status-pill ${isFinished ? 'bg-slate-100 text-slate-400' : isPlaying ? 'bg-blue-600 text-white' : 'bg-orange-100 text-orange-600'}">
+                ${m.status}
+            </span>
+            ${!isFinished ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500 tracking-tighter">${isPlaying ? '' : 'START MATCH →'}</button>` : ''}
+          </div>
+          <div class="flex gap-2 items-center">
+            <button onclick="${isPlaying ? `selectWinner(${ri},${mi},'A')` : ''}" class="team-btn ${m.sA === '1' ? 'winner shadow-lg shadow-green-200' : ''}">
+                <div class="text-[11px] font-bold uppercase truncate">${m.tA[0]} & ${m.tA[1]}</div>
+            </button>
+            <div class="text-[9px] font-black text-slate-200">VS</div>
+            <button onclick="${isPlaying ? `selectWinner(${ri},${mi},'B')` : ''}" class="team-btn ${m.sB === '1' ? 'winner shadow-lg shadow-green-200' : ''}">
+                <div class="text-[11px] font-bold uppercase truncate">${m.tB[0]} & ${m.tB[1]}</div>
+            </button>
+          </div>
         </div>`;
     });
-    container.innerHTML += html + "</div>";
   });
 }
 
 function renderLeaderboard() {
-  let s = {}; players.forEach(p => s[p.name] = { w: 0, l: 0, pts: 0 });
+  let s = {}; players.forEach(p => s[p.name] = { w: 0, pts: 0 });
   allRounds.forEach(r => r.forEach(m => {
-    if(m.sA === "1") { m.tA.forEach(p=>{if(s[p]){s[p].pts+=3; s[p].w++}}); m.tB.forEach(p=>{if(s[p])s[p].l++}); }
-    if(m.sB === "1") { m.tB.forEach(p=>{if(s[p]){s[p].pts+=3; s[p].w++}}); m.tA.forEach(p=>{if(s[p])s[p].l++}); }
+    if(m.sA === "1") { m.tA.forEach(p=>{if(s[p]){s[p].pts+=3; s[p].w++}}); }
+    if(m.sB === "1") { m.tB.forEach(p=>{if(s[p]){s[p].pts+=3; s[p].w++}}); }
   }));
   let sorted = Object.entries(s).sort((a,b) => b[1].pts - a[1].pts);
   document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `
-    <tr>
-      <td class="py-6 px-6 font-black text-slate-300 text-xs">#0${i+1}</td>
-      <td class="py-6 font-bold uppercase text-xs text-slate-800">${n}</td>
-      <td class="py-6 text-center text-[11px] font-bold text-slate-400">${v.w}W - ${v.l}L</td>
-      <td class="py-6 text-right px-6 font-black text-blue-600 text-lg">${v.pts}</td>
+    <tr class="text-sm border-b border-slate-50">
+        <td class="p-6 font-black text-slate-300 w-12 text-center">#${i+1}</td>
+        <td class="font-bold uppercase text-slate-700">${n}</td>
+        <td class="text-right p-6 font-black text-blue-600 text-lg">${v.pts} <span class="text-[10px] text-slate-300 ml-1">PTS</span></td>
     </tr>`).join("");
 }
 
-function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds, registeredIPs }); }
-function masterReset() { if(confirm("Confirm WIPE? This cannot be undone.")) { db.ref("tournaments/" + meetId).set(null); location.href = location.origin + location.pathname; } }
-function copyLink() { 
-    const el = document.getElementById("shareLink"); 
-    el.select(); 
-    document.execCommand('copy'); 
-    document.getElementById("copyBtn").innerText = "COPIED!";
-    setTimeout(() => document.getElementById("copyBtn").innerText = "Copy Link", 2000);
+function createTournament() {
+  const name = document.getElementById("tournamentName").value.trim();
+  if(!name) return;
+  meetId = name.replace(/\s+/g,'-').toLowerCase();
+  db.ref("tournaments/" + meetId).update({ name, createdAt: Date.now() }).then(() => {
+    location.search = "?meet=" + meetId;
+  });
 }
+
+function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds }); }
+function removePlayer(i) { if(confirm("Remove player?")) { players.splice(i,1); saveData(); } }
 
 loadArena();
 </script>
