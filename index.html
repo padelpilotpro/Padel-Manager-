@@ -39,7 +39,6 @@
   </div>
 
   <div id="view-arena" class="space-y-8">
-    
     <div id="infoDisplay" class="hidden glass-card border-blue-50 bg-blue-50/30 text-center py-4">
         <div class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 text-center">Match Details</div>
         <div class="flex justify-around items-center">
@@ -66,7 +65,7 @@
 
     <div id="shareSection" class="hidden glass-card flex gap-2">
       <input id="shareLink" class="flex-1 p-3 border rounded-xl text-[10px] bg-slate-50 text-slate-400 truncate" readonly />
-      <button onclick="copyLink()" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold">Copy</button>
+      <button onclick="copyLink()" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold">Copy Link</button>
     </div>
 
     <div class="space-y-3">
@@ -94,7 +93,7 @@
         <input id="courtsInput" type="number" min="1" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50">
       </div>
       <button id="rotateBtn" onclick="smartRotate()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg shadow-md uppercase tracking-tight transition active:scale-95">Generate Next Rotation</button>
-      <div id="lockNotice" class="hidden text-[9px] font-black text-orange-400 uppercase tracking-widest">Locked until start time</div>
+      <div id="lockNotice" class="hidden text-[9px] font-black text-orange-400 uppercase tracking-widest text-center">Locked until start time</div>
     </div>
 
     <div id="allRoundsContainer" class="space-y-6 pb-20"></div>
@@ -168,102 +167,90 @@ function loadArena() {
 function checkTimeLock() {
     if (isAdmin || !startTime) return;
     const now = new Date();
-    const [hours, minutes] = startTime.split(':');
-    const target = new Date();
-    target.setHours(hours, minutes, 0, 0);
+    const [h, m] = startTime.split(':');
+    const target = new Date(); target.setHours(h, m, 0, 0);
     const isLocked = now < target;
     const btn = document.getElementById("rotateBtn");
     const notice = document.getElementById("lockNotice");
-    if(isLocked) {
-        btn.disabled = true; btn.classList.add("locked-btn"); notice.classList.remove("hidden");
-    } else {
-        btn.disabled = false; btn.classList.remove("locked-btn"); notice.classList.add("hidden");
-    }
+    if(isLocked) { btn.disabled = true; btn.classList.add("locked-btn"); notice.classList.remove("hidden"); }
+    else { btn.disabled = false; btn.classList.remove("locked-btn"); notice.classList.add("hidden"); }
 }
 setInterval(checkTimeLock, 60000);
 
-function createTournament() {
-  const name = document.getElementById("tournamentName").value.trim();
-  const loc = document.getElementById("tournamentLocation").value.trim();
-  const time = document.getElementById("tournamentTime").value;
-  if(!name) return;
-  meetId = name.replace(/\s+/g,'-').toLowerCase();
-  db.ref("tournaments/" + meetId).update({ name, location: loc, time: time, createdAt: Date.now() }).then(() => { window.location.search = "?meet=" + meetId; });
-}
-
-function addPlayer() {
-  if(!isAdmin && registeredIPs.includes(userIP)) return alert("Already joined!");
-  const name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!name || players.some(p => p.name === name)) return;
-  players.push({ name, checkedIn: false, gamesPlayed: 0 });
-  if(!isAdmin) registeredIPs.push(userIP);
-  saveData();
-  document.getElementById("playerInput").value = "";
-}
-
 function smartRotate() {
   const courts = parseInt(document.getElementById("courtsInput").value);
-  let updatedRounds = allRounds.filter(r => r.some(m => m.status === "finished" || m.status === "playing"));
-  let busyPlayers = [];
-  updatedRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB); }));
-  let available = players.filter(p => p.checkedIn && !busyPlayers.includes(p.name));
-  available.sort(() => Math.random() - 0.5);
-  if (available.length < 4) return alert("Not enough READY players!");
+  let busy = [];
+  allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busy.push(...m.tA, ...m.tB); }));
+  
+  let justPlayed = [];
+  if (allRounds.length > 0) {
+    allRounds[allRounds.length - 1].forEach(m => { justPlayed.push(...m.tA, ...m.tB); });
+  }
+
+  let available = players.filter(p => p.checkedIn && !busy.includes(p.name));
+  
+  // PRIMARY SORT: Prioritize players with fewer games played overall
+  available.sort((a, b) => (a.gamesPlayed || 0) - (b.gamesPlayed || 0));
+
+  // SECONDARY FILTER: Separate those who rested vs those who just played
+  let fresh = available.filter(p => !justPlayed.includes(p.name));
+  let tired = available.filter(p => justPlayed.includes(p.name));
+
+  // SHUFFLE inside groups for random pairings
+  fresh.sort(() => Math.random() - 0.5);
+  tired.sort(() => Math.random() - 0.5);
+
+  let queue = [...fresh, ...tired];
+  if (queue.length < 4) return alert("Not enough READY players!");
+
   let newMatches = [];
   for(let i=0; i < courts; i++) {
-      if(available.length >= 4) {
-          newMatches.push({ tA: [available.shift().name, available.shift().name], tB: [available.shift().name, available.shift().name], sA: "", sB: "", status: "waiting" });
-      }
+    if(queue.length >= 4) {
+      newMatches.push({ tA: [queue.shift().name, queue.shift().name], tB: [queue.shift().name, queue.shift().name], sA: "", sB: "", status: "waiting" });
+    }
   }
-  if(newMatches.length > 0) updatedRounds.push(newMatches);
-  allRounds = updatedRounds;
-  saveData();
+  if(newMatches.length > 0) { allRounds.push(newMatches); saveData(); }
 }
 
 function renderLeaderboard() {
   let stats = {};
-  players.forEach(p => { stats[p.name] = { wins: 0, losses: 0, pts: 0, total: 0 }; });
-
-  allRounds.forEach(r => {
-    r.forEach(m => {
-      if (m.status === "finished") {
-        const teamAWon = m.sA === "1";
-        const teamBWon = m.sB === "1";
-        m.tA.forEach(pName => {
-          if (stats[pName]) {
-            stats[pName].total++;
-            if (teamAWon) { stats[pName].pts += 3; stats[pName].wins++; }
-            else if (teamBWon) { stats[pName].losses++; }
-          }
-        });
-        m.tB.forEach(pName => {
-          if (stats[pName]) {
-            stats[pName].total++;
-            if (teamBWon) { stats[pName].pts += 3; stats[pName].wins++; }
-            else if (teamAWon) { stats[pName].losses++; }
-          }
-        });
-      }
-    });
-  });
-
-  let sorted = Object.entries(stats).sort((a, b) => b[1].pts - a[1].pts || b[1].wins - a[1].wins);
+  players.forEach(p => { stats[p.name] = { w: 0, l: 0, pts: 0, t: 0 }; });
+  allRounds.forEach(r => r.forEach(m => {
+    if (m.status === "finished") {
+      const awon = m.sA === "1", bwon = m.sB === "1";
+      m.tA.forEach(p => { if(stats[p]) { stats[p].t++; if(awon){stats[p].pts+=3;stats[p].w++;} else if(bwon)stats[p].l++; }});
+      m.tB.forEach(p => { if(stats[p]) { stats[p].t++; if(bwon){stats[p].pts+=3;stats[p].w++;} else if(awon)stats[p].l++; }});
+    }
+  }));
+  let sorted = Object.entries(stats).sort((a, b) => b[1].pts - a[1].pts || b[1].w - a[1].w);
   const tbody = document.getElementById("leaderboardBody");
   if (!tbody) return;
-
-  tbody.innerHTML = sorted.map(([name, data], i) => {
-    let rank = `#${i + 1}`, medal = "text-slate-300", bg = "";
-    if (i === 0) { rank = "🥇"; medal = "text-2xl"; bg = "bg-yellow-50/20"; }
-    else if (i === 1) { rank = "🥈"; medal = "text-2xl"; }
-    else if (i === 2) { rank = "🥉"; medal = "text-2xl"; }
-
-    return `<tr class="${bg}">
-        <td class="px-6 py-5 text-center font-black ${medal}">${rank}</td>
-        <td class="px-6 py-5"><div class="font-bold uppercase text-slate-800 text-sm">${name}</div><div class="text-[9px] font-bold text-slate-400 uppercase">${data.total} Games</div></td>
-        <td class="px-6 py-5 text-center font-bold text-[11px]"><span class="text-green-600">${data.wins}W</span> <span class="text-slate-400 ml-1">${data.losses}L</span></td>
-        <td class="px-6 py-5 text-right font-black text-blue-600 text-lg">${data.pts}</td>
-      </tr>`;
+  tbody.innerHTML = sorted.map(([n, d], i) => {
+    let r = `#${i+1}`, m = "text-slate-300", bg = "";
+    if(i===0){ r="🥇"; m="text-2xl"; bg="bg-yellow-50/20"; }
+    else if(i===1){ r="🥈"; m="text-2xl"; }
+    else if(i===2){ r="🥉"; m="text-2xl"; }
+    return `<tr class="${bg}"><td class="px-6 py-5 text-center font-black ${m}">${r}</td><td class="px-6 py-5"><div class="font-bold uppercase text-slate-800 text-sm">${n}</div><div class="text-[9px] font-bold text-slate-400 uppercase">${d.t} Games</div></td><td class="px-6 py-5 text-center font-bold text-[11px]"><span class="text-green-600">${d.w}W</span> <span class="text-slate-400 ml-1">${d.l}L</span></td><td class="px-6 py-5 text-right font-black text-blue-600 text-lg">${d.pts}</td></tr>`;
   }).join("");
+}
+
+function createTournament() {
+  const n = document.getElementById("tournamentName").value.trim();
+  const l = document.getElementById("tournamentLocation").value.trim();
+  const t = document.getElementById("tournamentTime").value;
+  if(!n) return;
+  meetId = n.replace(/\s+/g,'-').toLowerCase();
+  db.ref("tournaments/" + meetId).update({ name: n, location: l, time: t, createdAt: Date.now() }).then(() => { window.location.search = "?meet=" + meetId; });
+}
+
+function addPlayer() {
+  if(!isAdmin && registeredIPs.includes(userIP)) return alert("Already joined!");
+  const n = document.getElementById("playerInput").value.trim().toLowerCase();
+  if(!n || players.some(p => p.name === n)) return;
+  players.push({ name: n, checkedIn: false, gamesPlayed: 0 });
+  if(!isAdmin) registeredIPs.push(userIP);
+  saveData();
+  document.getElementById("playerInput").value = "";
 }
 
 function toggleCheckIn(i) { players[i].checkedIn = !players[i].checkedIn; saveData(); }
@@ -276,37 +263,23 @@ function selectWinner(ri, mi, team) {
 
 function renderPlayers() {
   document.getElementById("totalRegCount").innerText = players.length;
-  document.getElementById("playersList").innerHTML = players.map((p, i) => `
-    <div class="flex items-center justify-between p-3 border rounded-xl bg-slate-50">
-      <div class="flex items-center gap-3"><span class="text-sm font-bold uppercase">${p.name}</span>${p.checkedIn ? '<span class="ready-badge">READY</span>' : '<span class="away-badge">AWAY</span>'}</div>
-      <div class="flex gap-2"><button onclick="toggleCheckIn(${i})" class="text-[9px] font-black px-2 py-1 bg-white border rounded shadow-sm">${p.checkedIn ? 'GO AWAY' : 'I\'M READY'}</button>${isAdmin ? `<button onclick="removePlayer(${i})" class="text-red-400 px-2">✕</button>` : ''}</div>
-    </div>`).join("");
+  document.getElementById("playersList").innerHTML = players.map((p, i) => `<div class="flex items-center justify-between p-3 border rounded-xl bg-slate-50"><div class="flex items-center gap-3"><span class="text-sm font-bold uppercase">${p.name}</span>${p.checkedIn ? '<span class="ready-badge">READY</span>' : '<span class="away-badge">AWAY</span>'}</div><div class="flex gap-2"><button onclick="toggleCheckIn(${i})" class="text-[9px] font-black px-2 py-1 bg-white border rounded shadow-sm">${p.checkedIn ? 'GO AWAY' : 'I\'M READY'}</button>${isAdmin ? `<button onclick="removePlayer(${i})" class="text-red-400 px-2">✕</button>` : ''}</div></div>`).join("");
 }
 
 function renderBench() {
-    let busyPlayers = [];
-    allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB); }));
-    const resting = players.filter(p => p.checkedIn && !busyPlayers.includes(p.name));
+    let busy = []; allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busy.push(...m.tA, ...m.tB); }));
+    const resting = players.filter(p => p.checkedIn && !busy.includes(p.name));
     document.getElementById("benchCount").innerText = resting.length;
     document.getElementById("benchList").innerHTML = resting.map(p => `<div class="bg-blue-50/50 border border-blue-100 p-3 rounded-2xl text-center text-[10px] font-black uppercase text-blue-600">${p.name}</div>`).join("");
 }
 
 function renderAllRounds() {
-  const container = document.getElementById("allRoundsContainer"); container.innerHTML = "";
+  const c = document.getElementById("allRoundsContainer"); c.innerHTML = "";
   allRounds.slice().reverse().forEach((r, riInv) => {
     const ri = allRounds.length - 1 - riInv;
     r.forEach((m, mi) => {
       const isP = m.status === "playing", isF = m.status === "finished";
-      container.innerHTML += `<div class="match-card ${isP ? 'match-active shadow-lg' : ''} space-y-4">
-          <div class="flex justify-between items-center">
-            <span class="status-pill ${isF ? 'bg-slate-100 text-slate-400' : isP ? 'bg-blue-600 text-white' : 'bg-orange-100 text-orange-600'}">${m.status}</span>
-            ${!isF ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500">${isP ? '' : 'START MATCH →'}</button>` : ''}
-          </div>
-          <div class="flex gap-2">
-            <button onclick="${isP ? `selectWinner(${ri},${mi},'A')` : ''}" class="team-btn ${m.sA === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tA[0]} & ${m.tA[1]}</button>
-            <button onclick="${isP ? `selectWinner(${ri},${mi},'B')` : ''}" class="team-btn ${m.sB === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tB[0]} & ${m.tB[1]}</button>
-          </div>
-        </div>`;
+      c.innerHTML += `<div class="match-card ${isP ? 'match-active shadow-lg' : ''} space-y-4"><div class="flex justify-between items-center"><span class="status-pill ${isF ? 'bg-slate-100 text-slate-400' : isP ? 'bg-blue-600 text-white' : 'bg-orange-100 text-orange-600'}">${m.status}</span>${!isF ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500">${isP ? '' : 'START MATCH →'}</button>` : ''}</div><div class="flex gap-2"><button onclick="${isP ? `selectWinner(${ri},${mi},'A')` : ''}" class="team-btn ${m.sA === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tA[0]} & ${m.tA[1]}</button><button onclick="${isP ? `selectWinner(${ri},${mi},'B')` : ''}" class="team-btn ${m.sB === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tB[0]} & ${m.tB[1]}</button></div></div>`;
     });
   });
 }
