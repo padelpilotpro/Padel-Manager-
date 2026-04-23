@@ -20,6 +20,7 @@
     .status-pill { font-size: 10px; font-weight: 800; padding: 4px 12px; border-radius: 99px; text-transform: uppercase; }
     .ready-badge { background: #22c55e; color: white; padding: 2px 8px; border-radius: 6px; font-size: 9px; font-weight: 800; }
     .away-badge { background: #f1f5f9; color: #94a3b8; padding: 2px 8px; border-radius: 6px; font-size: 9px; font-weight: 800; }
+    .locked-btn { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
   </style>
 </head>
 <body>
@@ -38,12 +39,32 @@
   </div>
 
   <div id="view-arena" class="space-y-8">
+    
+    <div id="infoDisplay" class="hidden glass-card border-blue-50 bg-blue-50/30 text-center py-4">
+        <div class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Match Details</div>
+        <div class="flex justify-around items-center">
+            <div>
+                <div class="text-[9px] font-bold text-slate-400 uppercase">Location</div>
+                <div id="locText" class="font-bold text-slate-700">---</div>
+            </div>
+            <div class="h-8 w-[1px] bg-blue-100"></div>
+            <div>
+                <div class="text-[9px] font-bold text-slate-400 uppercase">Start Time</div>
+                <div id="timeText" class="font-bold text-slate-700">---</div>
+            </div>
+        </div>
+    </div>
+
     <section id="setupArea" class="glass-card space-y-4">
       <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none font-bold" placeholder="Tournament Name">
-      <button onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">Lock Arena</button>
+      <div class="grid grid-cols-2 gap-4">
+        <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Location (e.g. Al Ain Courts)">
+        <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none">
+      </div>
+      <button onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">Lock & Initialize</button>
     </section>
 
-    <div id="shareSection" class="glass-card hidden flex gap-2">
+    <div id="shareSection" class="hidden glass-card flex gap-2">
       <input id="shareLink" class="flex-1 p-3 border rounded-xl text-[10px] bg-slate-50 text-slate-400 truncate" readonly />
       <button onclick="copyLink()" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold">Copy</button>
     </div>
@@ -51,7 +72,7 @@
     <div class="space-y-3">
       <div class="flex gap-2">
         <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg outline-none focus:ring-2 ring-blue-100" placeholder="Enter Name">
-        <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold shadow-lg shadow-blue-100">Join</button>
+        <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold">Join</button>
       </div>
       <div class="glass-card">
         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Players (<span id="totalRegCount">0</span>)</div>
@@ -60,9 +81,9 @@
     </div>
 
     <div class="glass-card">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-black uppercase text-xs text-blue-500">Waiting Bench</h3>
-        <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase"><span id="benchCount">0</span> Ready</span>
+      <div class="flex justify-between items-center mb-4 text-xs font-black uppercase">
+        <h3 class="text-blue-500">Waiting Bench</h3>
+        <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg"><span id="benchCount">0</span> Ready</span>
       </div>
       <div id="benchList" class="grid grid-cols-2 gap-2"></div>
     </div>
@@ -70,9 +91,10 @@
     <div class="glass-card space-y-4 text-center border-orange-100 shadow-orange-50/50 shadow-lg">
       <div class="flex justify-between items-center px-2">
         <label class="font-bold text-slate-700">Courts Available</label>
-        <input id="courtsInput" type="number" min="1" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50 border-orange-200">
+        <input id="courtsInput" type="number" min="1" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50">
       </div>
-      <button onclick="smartRotate()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg shadow-md uppercase tracking-tight">Generate Next Rotation</button>
+      <button id="rotateBtn" onclick="smartRotate()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg shadow-md uppercase tracking-tight transition active:scale-95">Generate Next Rotation</button>
+      <div id="lockNotice" class="hidden text-[9px] font-black text-orange-400 uppercase tracking-widest">Locked until start time</div>
     </div>
 
     <div id="allRoundsContainer" class="space-y-6 pb-20"></div>
@@ -105,15 +127,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let meetId = null, players = [], allRounds = [], registeredIPs = [], isAdmin = false, userIP = "";
+let meetId = null, players = [], allRounds = [], registeredIPs = [], isAdmin = false, userIP = "", startTime = "";
 fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => userIP = d.ip);
-
-function switchTab(t) {
-  document.getElementById('view-arena').classList.toggle('hidden', t !== 'arena');
-  document.getElementById('view-stats').classList.toggle('hidden', t !== 'stats');
-  document.getElementById('tab-arena').classList.toggle('active', t === 'arena');
-  document.getElementById('tab-stats').classList.toggle('active', t === 'stats');
-}
 
 function loadArena() {
   const params = new URLSearchParams(location.search);
@@ -122,29 +137,71 @@ function loadArena() {
     document.getElementById("setupArea").classList.add("hidden");
     document.getElementById("shareSection").classList.remove("hidden");
     document.getElementById("shareLink").value = window.location.href;
+    
     db.ref("tournaments/" + meetId).on("value", snap => {
       const data = snap.val() || {};
       players = data.players || [];
       allRounds = data.rounds || [];
       registeredIPs = data.registeredIPs || [];
+      startTime = data.time || "";
+      
+      if(data.location) {
+          document.getElementById("infoDisplay").classList.remove("hidden");
+          document.getElementById("locText").innerText = data.location;
+          document.getElementById("timeText").innerText = data.time;
+      }
+      checkTimeLock();
       renderAll();
     });
   }
 }
 
+function checkTimeLock() {
+    if (isAdmin || !startTime) return;
+    
+    const now = new Date();
+    const [hours, minutes] = startTime.split(':');
+    const target = new Date();
+    target.setHours(hours, minutes, 0, 0);
+
+    const isLocked = now < target;
+    const btn = document.getElementById("rotateBtn");
+    const notice = document.getElementById("lockNotice");
+
+    if(isLocked) {
+        btn.disabled = true;
+        btn.classList.add("locked-btn");
+        notice.classList.remove("hidden");
+    } else {
+        btn.disabled = false;
+        btn.classList.remove("locked-btn");
+        notice.classList.add("hidden");
+    }
+}
+
+// Check every minute
+setInterval(checkTimeLock, 60000);
+
+function createTournament() {
+  const name = document.getElementById("tournamentName").value.trim();
+  const loc = document.getElementById("tournamentLocation").value.trim();
+  const time = document.getElementById("tournamentTime").value;
+  if(!name) return;
+  meetId = name.replace(/\s+/g,'-').toLowerCase();
+  db.ref("tournaments/" + meetId).update({ name, location: loc, time: time, createdAt: Date.now() }).then(() => { 
+      window.location.search = "?meet=" + meetId; 
+  });
+}
+
 function addPlayer() {
-  if(!isAdmin && registeredIPs.includes(userIP)) return alert("One device, one entry!");
+  if(!isAdmin && registeredIPs.includes(userIP)) return alert("Already joined!");
   const name = document.getElementById("playerInput").value.trim().toLowerCase();
   if(!name || players.some(p => p.name === name)) return;
-  players.push({ name, checkedIn: true, gamesPlayed: 0 });
+  // DEFAULT AWAY: checkedIn is false
+  players.push({ name, checkedIn: false, gamesPlayed: 0 });
   if(!isAdmin) registeredIPs.push(userIP);
   saveData();
   document.getElementById("playerInput").value = "";
-}
-
-function toggleCheckIn(i) {
-    players[i].checkedIn = !players[i].checkedIn;
-    saveData();
 }
 
 function smartRotate() {
@@ -153,22 +210,15 @@ function smartRotate() {
   let busyPlayers = [];
   updatedRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB); }));
   
-  // Only players who are Checked In AND not busy
   let available = players.filter(p => p.checkedIn && !busyPlayers.includes(p.name));
-  
-  // Shuffle Available for random partnerships
   available.sort(() => Math.random() - 0.5);
 
-  if (available.length < 4) return alert("Wait for a match to finish!");
+  if (available.length < 4) return alert("Not enough READY players!");
 
   let newMatches = [];
   for(let i=0; i < courts; i++) {
       if(available.length >= 4) {
-          const p1 = available.shift().name;
-          const p2 = available.shift().name;
-          const p3 = available.shift().name;
-          const p4 = available.shift().name;
-          newMatches.push({ tA: [p1, p2], tB: [p3, p4], sA: "", sB: "", status: "waiting" });
+          newMatches.push({ tA: [available.shift().name, available.shift().name], tB: [available.shift().name, available.shift().name], sA: "", sB: "", status: "waiting" });
       }
   }
   if(newMatches.length > 0) updatedRounds.push(newMatches);
@@ -176,24 +226,16 @@ function smartRotate() {
   saveData();
 }
 
-function toggleMatch(ri, mi) {
-    const match = allRounds[ri][mi];
-    if (match.status === "waiting") match.status = "playing";
-    saveData();
-}
-
+// Rest of your functions (toggleCheckIn, renderPlayers, toggleMatch, selectWinner, etc.) stay the same as the previous version.
+function toggleCheckIn(i) { players[i].checkedIn = !players[i].checkedIn; saveData(); }
+function toggleMatch(ri, mi) { const m = allRounds[ri][mi]; if (m.status === "waiting") m.status = "playing"; saveData(); }
 function selectWinner(ri, mi, team) {
   const match = allRounds[ri][mi];
-  match.sA = (team === 'A') ? "1" : "0";
-  match.sB = (team === 'B') ? "1" : "0";
+  match.sA = (team === 'A') ? "1" : "0"; match.sB = (team === 'B') ? "1" : "0";
   match.status = "finished";
-  [...match.tA, ...match.tB].forEach(pName => {
-      const p = players.find(x => x.name === pName);
-      if(p) p.gamesPlayed = (p.gamesPlayed || 0) + 1;
-  });
+  [...match.tA, ...match.tB].forEach(pName => { const p = players.find(x => x.name === pName); if(p) p.gamesPlayed = (p.gamesPlayed || 0) + 1; });
   saveData();
 }
-
 function renderPlayers() {
   document.getElementById("totalRegCount").innerText = players.length;
   document.getElementById("playersList").innerHTML = players.map((p, i) => `
@@ -203,12 +245,11 @@ function renderPlayers() {
         ${p.checkedIn ? '<span class="ready-badge">READY</span>' : '<span class="away-badge">AWAY</span>'}
       </div>
       <div class="flex gap-2">
-        <button onclick="toggleCheckIn(${i})" class="text-[9px] font-black px-2 py-1 bg-white border rounded shadow-sm">${p.checkedIn ? 'GO AWAY' : 'IM READY'}</button>
+        <button onclick="toggleCheckIn(${i})" class="text-[9px] font-black px-2 py-1 bg-white border rounded shadow-sm">${p.checkedIn ? 'GO AWAY' : 'I\'M READY'}</button>
         ${isAdmin ? `<button onclick="removePlayer(${i})" class="text-red-400 px-2">✕</button>` : ''}
       </div>
     </div>`).join("");
 }
-
 function renderBench() {
     let busyPlayers = [];
     allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB); }));
@@ -216,16 +257,13 @@ function renderBench() {
     document.getElementById("benchCount").innerText = resting.length;
     document.getElementById("benchList").innerHTML = resting.map(p => `<div class="bg-blue-50/50 border border-blue-100 p-3 rounded-2xl text-center text-[10px] font-black uppercase text-blue-600">${p.name}</div>`).join("");
 }
-
 function renderAllRounds() {
   const container = document.getElementById("allRoundsContainer"); container.innerHTML = "";
   allRounds.slice().reverse().forEach((r, riInv) => {
     const ri = allRounds.length - 1 - riInv;
     r.forEach((m, mi) => {
-      const isPlaying = m.status === "playing";
-      const isFinished = m.status === "finished";
-      container.innerHTML += `
-        <div class="match-card ${isPlaying ? 'match-active shadow-lg' : ''} space-y-4">
+      const isPlaying = m.status === "playing"; const isFinished = m.status === "finished";
+      container.innerHTML += `<div class="match-card ${isPlaying ? 'match-active shadow-lg' : ''} space-y-4">
           <div class="flex justify-between items-center">
             <span class="status-pill ${isFinished ? 'bg-slate-100 text-slate-400' : isPlaying ? 'bg-blue-600 text-white' : 'bg-orange-100 text-orange-600'}">${m.status}</span>
             ${!isFinished ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500">${isPlaying ? '' : 'START MATCH →'}</button>` : ''}
@@ -238,7 +276,6 @@ function renderAllRounds() {
     });
   });
 }
-
 function renderLeaderboard() {
   let s = {}; players.forEach(p => s[p.name] = { pts: 0 });
   allRounds.forEach(r => r.forEach(m => {
@@ -248,15 +285,8 @@ function renderLeaderboard() {
   let sorted = Object.entries(s).sort((a,b) => b[1].pts - a[1].pts);
   document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `<tr class="border-b border-slate-50"><td class="p-6 font-black text-slate-300 w-12 text-center">#${i+1}</td><td class="font-bold uppercase text-slate-700">${n}</td><td class="text-right p-6 font-black text-blue-600 text-lg">${v.pts} <span class="text-[10px] text-slate-300">PTS</span></td></tr>`).join("");
 }
-
-function createTournament() {
-  const name = document.getElementById("tournamentName").value.trim();
-  if(!name) return;
-  meetId = name.replace(/\s+/g,'-').toLowerCase();
-  db.ref("tournaments/" + meetId).update({ name, createdAt: Date.now() }).then(() => { window.location.search = "?meet=" + meetId; });
-}
-
-function unlockDev() { if(prompt("Pass:") === "padel-dev-123") { isAdmin = true; document.getElementById("devIndicator").classList.remove("hidden"); document.getElementById("adminResetContainer").classList.remove("hidden"); renderAll(); } }
+function unlockDev() { if(prompt("Pass:") === "padel-dev-123") { isAdmin = true; document.getElementById("devIndicator").classList.remove("hidden"); document.getElementById("adminResetContainer").classList.remove("hidden"); checkTimeLock(); renderAll(); } }
+function switchTab(t) { document.getElementById('view-arena').classList.toggle('hidden', t !== 'arena'); document.getElementById('view-stats').classList.toggle('hidden', t !== 'stats'); document.getElementById('tab-arena').classList.toggle('active', t === 'arena'); document.getElementById('tab-stats').classList.toggle('active', t === 'stats'); }
 function renderAll() { renderPlayers(); renderBench(); renderAllRounds(); renderLeaderboard(); }
 function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds, registeredIPs }); }
 function removePlayer(i) { players.splice(i,1); saveData(); }
