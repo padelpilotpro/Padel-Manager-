@@ -3,26 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PadelPilot Arena | Pro Hub</title>
+  <title>PadelPilot Arena | Pro</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
     body { background: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; color: #0f172a; }
-    .glass-card { background: white; border-radius: 28px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.03); }
+    .glass-card { background: white; border-radius: 28px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.05); }
     .match-card { background: white; border-radius: 24px; padding: 20px; border: 1px solid #e2e8f0; transition: all 0.3s; }
-    .match-active { border-color: #3b82f6; background: #f0f7ff; ring: 4px ring-blue-50; }
+    .match-active { border-color: #3b82f6; background: #eff6ff; ring: 4px ring-blue-50; }
     .team-btn { flex: 1; padding: 12px; border-radius: 16px; border: 2px solid #f1f5f9; text-align: center; cursor: pointer; background: white; }
     .team-btn.winner { background: #22c55e; border-color: #16a34a; color: white; }
     .nav-tab { flex: 1; text-align: center; padding: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; border-radius: 14px; color: #94a3b8; }
     .nav-tab.active { background: white; color: #3b82f6; box-shadow: 0 4px 12px -2px rgb(59 130 246 / 0.15); }
     .status-pill { font-size: 10px; font-weight: 800; padding: 4px 12px; border-radius: 99px; text-transform: uppercase; }
+    .locked-field { background-color: #f1f5f9 !important; color: #64748b !important; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
-<div class="sticky top-0 z-50 bg-slate-50/90 backdrop-blur-md px-5 py-4 border-b">
+<div class="sticky top-0 z-50 bg-slate-50/90 backdrop-blur-md px-5 py-4 border-b border-slate-100">
   <div class="max-w-xl mx-auto flex bg-slate-200/50 p-1 rounded-2xl">
     <button onclick="switchTab('arena')" id="tab-arena" class="nav-tab active">Arena Hub</button>
     <button onclick="switchTab('stats')" id="tab-stats" class="nav-tab">Standings</button>
@@ -30,60 +31,80 @@
 </div>
 
 <div class="max-w-xl mx-auto px-5 py-6 space-y-8">
+
+  <div class="text-center">
+    <div class="text-4xl font-black tracking-tighter text-slate-900">PADELPILOT <span class="text-blue-600">ARENA</span></div>
+    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block tracking-widest">Admin Access</div>
+  </div>
+
   <div id="view-arena" class="space-y-8">
     
     <section id="setupArea" class="glass-card space-y-4">
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Arena Setup</div>
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Tournament Setup</div>
       <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none font-bold" placeholder="Tournament Name">
-      <button onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">Create & Lock Arena</button>
+      <div class="grid grid-cols-2 gap-4">
+        <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Location">
+        <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none">
+      </div>
+      <button id="updateBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold transition active:scale-95">Save & Lock Arena</button>
     </section>
 
     <div id="shareSection" class="glass-card hidden space-y-3">
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invite Players</div>
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Invite Players</div>
       <div class="flex gap-2">
-        <input id="shareLink" class="flex-1 p-3 border rounded-xl text-[10px] bg-slate-50 text-slate-400 truncate" readonly />
-        <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold">Copy</button>
+        <input id="shareLink" class="flex-1 p-3 border rounded-xl text-[10px] bg-slate-50 font-mono text-slate-400 truncate" readonly />
+        <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold">Copy Link</button>
       </div>
     </div>
 
-    <div class="glass-card">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-black uppercase text-xs tracking-widest text-slate-400">Registered (<span id="totalRegCount">0</span>)</h3>
+    <div class="space-y-3">
+      <div class="flex gap-2">
+        <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg outline-none focus:ring-2 ring-blue-100" placeholder="Your Name">
+        <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold shadow-lg shadow-blue-100">Join</button>
       </div>
-      <div class="flex gap-2 mb-4">
-        <input id="playerInput" class="flex-1 p-4 border rounded-xl outline-none" placeholder="Player Name">
-        <button onclick="addPlayer()" class="bg-blue-600 text-white px-6 rounded-xl font-bold">Add</button>
+      <div class="glass-card">
+        <div class="flex justify-between items-center mb-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+          <span>Checked-In Players (<span id="totalRegCount">0</span>)</span>
+        </div>
+        <div id="playersList" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
       </div>
-      <div id="playersList" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
     </div>
 
     <div class="glass-card border-slate-100">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-black uppercase text-xs tracking-widest text-blue-500">The Bench</h3>
-        <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-bold"><span id="benchCount">0</span> Resting</span>
+        <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase"><span id="benchCount">0</span> Resting</span>
       </div>
       <div id="benchList" class="grid grid-cols-2 gap-2"></div>
     </div>
 
-    <div class="glass-card space-y-4 border-orange-100 shadow-lg shadow-orange-50">
-      <div class="flex justify-between items-center">
-        <label class="font-bold text-slate-600">Courts</label>
-        <input id="courtsInput" type="number" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50">
+    <div id="rotationControls" class="glass-card space-y-4 text-center border-orange-100 shadow-orange-50/50 shadow-lg">
+      <div class="flex justify-between items-center px-2">
+        <label class="font-bold text-slate-700">Courts Available</label>
+        <input id="courtsInput" type="number" min="1" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50 border-orange-200">
       </div>
-      <button onclick="smartRotate()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg shadow-md uppercase tracking-tight">Generate Rotation</button>
+      <button onclick="smartRotate()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg shadow-md transition active:scale-95 uppercase">Generate Next Rotation</button>
     </div>
 
     <div id="allRoundsContainer" class="space-y-6 pb-20"></div>
   </div>
 
-  <div id="view-stats" class="hidden">
-    <div class="bg-white border rounded-[32px] overflow-hidden">
-      <div class="p-8 bg-slate-50 border-b font-black uppercase text-center tracking-widest">Rankings</div>
+  <div id="view-stats" class="hidden space-y-6">
+    <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden border-slate-200">
+      <div class="p-8 border-b bg-slate-50/50"><h2 class="text-2xl font-black text-slate-800 uppercase tracking-tighter text-center">Standings</h2></div>
       <table class="w-full">
         <tbody id="leaderboardBody" class="divide-y divide-slate-100"></tbody>
       </table>
     </div>
   </div>
+
+  <div class="text-center py-10 border-t border-slate-100">
+    <button onclick="unlockDev()" class="text-[10px] text-slate-300 font-bold uppercase tracking-[0.4em]">Developer Access</button>
+    <div id="adminResetContainer" class="hidden mt-6 flex justify-center gap-4">
+        <button onclick="masterReset()" class="text-[10px] text-red-400 font-bold uppercase border border-red-100 px-6 py-2 rounded-full">Master Reset</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -93,31 +114,65 @@ const firebaseConfig = {
   databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
   projectId: "padelpilot-b8e47"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const DEV_PASSWORD = "padel-dev-123";
 
-let meetId = null, players = [], allRounds = [];
+let meetId = null, players = [], allRounds = [], registeredIPs = [], isAdmin = false, userIP = "";
+fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => userIP = d.ip);
 
-function switchTab(t) {
-  document.getElementById('view-arena').classList.toggle('hidden', t!=='arena');
-  document.getElementById('view-stats').classList.toggle('hidden', t!=='stats');
-  document.getElementById('tab-arena').classList.toggle('active', t==='arena');
-  document.getElementById('tab-stats').classList.toggle('active', t==='stats');
+function switchTab(target) {
+  document.getElementById('view-arena').classList.toggle('hidden', target !== 'arena');
+  document.getElementById('view-stats').classList.toggle('hidden', target !== 'stats');
+  document.getElementById('tab-arena').classList.toggle('active', target === 'arena');
+  document.getElementById('tab-stats').classList.toggle('active', target === 'stats');
 }
 
 function loadArena() {
   const params = new URLSearchParams(location.search);
   if (params.get("meet")) {
     meetId = params.get("meet");
-    document.getElementById("setupArea").classList.add("hidden");
     document.getElementById("shareSection").classList.remove("hidden");
     document.getElementById("shareLink").value = window.location.href;
+
     db.ref("tournaments/" + meetId).on("value", snap => {
       const data = snap.val() || {};
       players = data.players || [];
       allRounds = data.rounds || [];
+      registeredIPs = data.registeredIPs || [];
+
+      if(data.name) {
+          document.getElementById("tournamentName").value = data.name;
+          document.getElementById("tournamentLocation").value = data.location || "";
+          document.getElementById("tournamentTime").value = data.time || "";
+          applyFieldLock(!isAdmin);
+      }
       renderAll();
     });
+  }
+}
+
+function applyFieldLock(lock) {
+    const ids = ["tournamentName", "tournamentLocation", "tournamentTime"];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        el.readOnly = lock;
+        lock ? el.classList.add("locked-field") : el.classList.remove("locked-field");
+    });
+    const btn = document.getElementById("updateBtn");
+    btn.disabled = lock;
+    btn.innerText = lock ? "Tournament Locked" : "Save Arena Details";
+    btn.style.opacity = lock ? "0.5" : "1";
+}
+
+function unlockDev() {
+  if(prompt("Admin Key:") === DEV_PASSWORD) {
+    isAdmin = true;
+    document.getElementById("devIndicator").classList.remove("hidden");
+    document.getElementById("adminResetContainer").classList.remove("hidden");
+    applyFieldLock(false);
+    renderAll();
   }
 }
 
@@ -125,9 +180,25 @@ function createTournament() {
   const name = document.getElementById("tournamentName").value.trim();
   if(!name) return;
   meetId = name.replace(/\s+/g,'-').toLowerCase();
-  db.ref("tournaments/" + meetId).update({ name, createdAt: Date.now() }).then(() => {
-    window.location.search = "?meet=" + meetId;
+  db.ref("tournaments/" + meetId).update({ 
+      name, 
+      location: document.getElementById("tournamentLocation").value, 
+      time: document.getElementById("tournamentTime").value, 
+      createdAt: Date.now() 
+  }).then(() => {
+      window.location.search = "?meet=" + meetId;
   });
+}
+
+function addPlayer() {
+  if(!meetId) return alert("Setup arena first!");
+  if(!isAdmin && registeredIPs.includes(userIP)) return alert("Already joined!");
+  const name = document.getElementById("playerInput").value.trim().toLowerCase();
+  if(!name || players.some(p => p.name === name)) return;
+  players.push({ name, checkedIn: true, gamesPlayed: 0 });
+  if(!isAdmin) registeredIPs.push(userIP);
+  saveData();
+  document.getElementById("playerInput").value = "";
 }
 
 function renderAll() {
@@ -137,26 +208,38 @@ function renderAll() {
     renderLeaderboard();
 }
 
-function addPlayer() {
-  const name = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!name || players.some(p => p.name === name)) return;
-  players.push({ name, checkedIn: true, gamesPlayed: 0 });
-  saveData();
-  document.getElementById("playerInput").value = "";
+function renderPlayers() {
+  document.getElementById("totalRegCount").innerText = players.length;
+  document.getElementById("playersList").innerHTML = players.map((p, i) => `
+    <div class="flex items-center justify-between p-3 border rounded-xl bg-slate-50">
+      <span class="text-sm font-bold uppercase">${p.name} <small class="text-slate-400 font-normal ml-2">${p.gamesPlayed || 0} Games</small></span>
+      ${isAdmin ? `<button onclick="removePlayer(${i})" class="text-red-400 text-xs px-2">✕</button>` : ''}
+    </div>`).join("");
+}
+
+function renderBench() {
+    let busyPlayers = [];
+    allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB); }));
+    const resting = players.filter(p => !busyPlayers.includes(p.name));
+    document.getElementById("benchCount").innerText = resting.length;
+    document.getElementById("benchList").innerHTML = resting.length > 0 
+        ? resting.map(p => `<div class="bg-blue-50/50 border border-blue-100 p-3 rounded-2xl text-center text-[10px] font-black uppercase text-blue-600">${p.name}</div>`).join("")
+        : `<div class="col-span-2 text-center text-[10px] py-4 text-slate-300 uppercase font-bold tracking-widest">No one waiting</div>`;
 }
 
 function toggleMatch(ri, mi) {
+    if(!isAdmin) return;
     const match = allRounds[ri][mi];
     if (match.status === "waiting") match.status = "playing";
     saveData();
 }
 
 function selectWinner(ri, mi, team) {
+  if(!isAdmin) return;
   const match = allRounds[ri][mi];
   match.sA = (team === 'A') ? "1" : "0";
   match.sB = (team === 'B') ? "1" : "0";
   match.status = "finished";
-  
   [...match.tA, ...match.tB].forEach(pName => {
       const p = players.find(x => x.name === pName);
       if(p) p.gamesPlayed = (p.gamesPlayed || 0) + 1;
@@ -165,59 +248,28 @@ function selectWinner(ri, mi, team) {
 }
 
 function smartRotate() {
+  if(!isAdmin) return alert("Admin only!");
   const activeNames = players.map(p => p.name);
   const courts = parseInt(document.getElementById("courtsInput").value);
-  
   let updatedRounds = allRounds.filter(r => r.some(m => m.status === "finished" || m.status === "playing"));
   let busyPlayers = [];
-  updatedRounds.forEach(r => r.forEach(m => {
-      if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB);
-  }));
-
+  updatedRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB); }));
   let available = activeNames.filter(p => !busyPlayers.includes(p));
   available.sort((a,b) => {
       const pA = players.find(x => x.name === a);
       const pB = players.find(x => x.name === b);
       return (pA.gamesPlayed || 0) - (pB.gamesPlayed || 0);
   });
-
-  if (available.length < 4) return alert("Need at least 4 resting players!");
-
+  if (available.length < 4) return alert("Need 4 players!");
   let newMatches = [];
   for(let i=0; i < courts; i++) {
       if(available.length >= 4) {
-          newMatches.push({
-              tA: [available.shift(), available.shift()],
-              tB: [available.shift(), available.shift()],
-              sA: "", sB: "", status: "waiting"
-          });
+          newMatches.push({ tA: [available.shift(), available.shift()], tB: [available.shift(), available.shift()], sA: "", sB: "", status: "waiting" });
       }
   }
-  
   if(newMatches.length > 0) updatedRounds.push(newMatches);
   allRounds = updatedRounds;
   saveData();
-}
-
-function renderPlayers() {
-  document.getElementById("totalRegCount").innerText = players.length;
-  document.getElementById("playersList").innerHTML = players.map((p, i) => `
-    <div class="flex items-center justify-between p-3 border rounded-xl bg-slate-50 border-slate-100">
-      <span class="text-sm font-bold uppercase">${p.name} <small class="text-slate-400 font-normal ml-2">${p.gamesPlayed || 0} Games</small></span>
-      <button onclick="removePlayer(${i})" class="text-red-300 text-xs px-2">✕</button>
-    </div>`).join("");
-}
-
-function renderBench() {
-    let busyPlayers = [];
-    allRounds.forEach(r => r.forEach(m => {
-        if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB);
-    }));
-    const resting = players.filter(p => !busyPlayers.includes(p.name));
-    document.getElementById("benchCount").innerText = resting.length;
-    document.getElementById("benchList").innerHTML = resting.length > 0 
-        ? resting.map(p => `<div class="bg-blue-50/50 border border-blue-100 p-3 rounded-2xl text-center text-[10px] font-black uppercase text-blue-600">${p.name}</div>`).join("")
-        : `<div class="col-span-2 text-center text-[10px] py-4 text-slate-300 uppercase font-bold tracking-widest">No one waiting</div>`;
 }
 
 function renderAllRounds() {
@@ -228,14 +280,14 @@ function renderAllRounds() {
       const isPlaying = m.status === "playing";
       const isFinished = m.status === "finished";
       container.innerHTML += `
-        <div class="match-card ${isPlaying ? 'match-active shadow-lg shadow-blue-100/50' : ''} space-y-4">
+        <div class="match-card ${isPlaying ? 'match-active' : ''} space-y-4">
           <div class="flex justify-between items-center">
             <span class="status-pill ${isFinished ? 'bg-slate-100 text-slate-400' : isPlaying ? 'bg-blue-600 text-white' : 'bg-orange-100 text-orange-600'}">${m.status}</span>
-            ${!isFinished ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500">${isPlaying ? '' : 'START MATCH →'}</button>` : ''}
+            ${!isFinished && isAdmin ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500">${isPlaying ? '' : 'START MATCH →'}</button>` : ''}
           </div>
           <div class="flex gap-2">
-            <button onclick="${isPlaying ? `selectWinner(${ri},${mi},'A')` : ''}" class="team-btn ${m.sA === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tA[0]} & ${m.tA[1]}</button>
-            <button onclick="${isPlaying ? `selectWinner(${ri},${mi},'B')` : ''}" class="team-btn ${m.sB === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tB[0]} & ${m.tB[1]}</button>
+            <button onclick="${isPlaying && isAdmin ? `selectWinner(${ri},${mi},'A')` : ''}" class="team-btn ${m.sA === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tA[0]} & ${m.tA[1]}</button>
+            <button onclick="${isPlaying && isAdmin ? `selectWinner(${ri},${mi},'B')` : ''}" class="team-btn ${m.sB === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tB[0]} & ${m.tB[1]}</button>
           </div>
         </div>`;
     });
@@ -252,8 +304,9 @@ function renderLeaderboard() {
   document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `<tr class="border-b border-slate-50"><td class="p-6 font-black text-slate-300 w-12 text-center">#${i+1}</td><td class="font-bold uppercase text-slate-700">${n}</td><td class="text-right p-6 font-black text-blue-600 text-lg">${v.pts} <span class="text-[10px] text-slate-300">PTS</span></td></tr>`).join("");
 }
 
-function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds }); }
-function removePlayer(i) { if(confirm("Remove?")) { players.splice(i,1); saveData(); } }
+function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds, registeredIPs }); }
+function removePlayer(i) { if(isAdmin && confirm("Remove player?")) { players.splice(i,1); saveData(); } }
+function masterReset() { if(isAdmin && confirm("WIPE ALL DATA?")) { db.ref("tournaments/" + meetId).set(null); location.href = location.origin + location.pathname; } }
 function copyLink() { const el = document.getElementById("shareLink"); el.select(); document.execCommand('copy'); alert("Link Copied!"); }
 
 loadArena();
