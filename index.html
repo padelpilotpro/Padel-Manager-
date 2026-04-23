@@ -13,8 +13,7 @@
     .glass-card { background: white; border-radius: 28px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.03); }
     .match-card { background: white; border-radius: 24px; padding: 20px; border: 1px solid #e2e8f0; transition: all 0.3s; }
     .match-active { border-color: #3b82f6; background: #f0f7ff; ring: 4px ring-blue-50; }
-    .team-btn { flex: 1; padding: 12px; border-radius: 16px; border: 2px solid #f1f5f9; text-align: center; cursor: pointer; background: white; transition: transform 0.1s; }
-    .team-btn:active { transform: scale(0.95); }
+    .team-btn { flex: 1; padding: 12px; border-radius: 16px; border: 2px solid #f1f5f9; text-align: center; cursor: pointer; background: white; }
     .team-btn.winner { background: #22c55e; border-color: #16a34a; color: white; }
     .nav-tab { flex: 1; text-align: center; padding: 12px; font-weight: 800; font-size: 11px; text-transform: uppercase; border-radius: 14px; color: #94a3b8; }
     .nav-tab.active { background: white; color: #3b82f6; box-shadow: 0 4px 12px -2px rgb(59 130 246 / 0.15); }
@@ -34,16 +33,25 @@
   <div id="view-arena" class="space-y-8">
     
     <section id="setupArea" class="glass-card space-y-4">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Arena Setup</div>
       <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none font-bold" placeholder="Tournament Name">
-      <button onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">Initialize Arena</button>
+      <button onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">Create & Lock Arena</button>
     </section>
+
+    <div id="shareSection" class="glass-card hidden space-y-3">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invite Players</div>
+      <div class="flex gap-2">
+        <input id="shareLink" class="flex-1 p-3 border rounded-xl text-[10px] bg-slate-50 text-slate-400 truncate" readonly />
+        <button onclick="copyLink()" id="copyBtn" class="bg-blue-600 text-white px-5 rounded-xl text-xs font-bold">Copy</button>
+      </div>
+    </div>
 
     <div class="glass-card">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="font-black uppercase text-xs tracking-widest text-slate-400">Registered Players (<span id="totalRegCount">0</span>)</h3>
+        <h3 class="font-black uppercase text-xs tracking-widest text-slate-400">Registered (<span id="totalRegCount">0</span>)</h3>
       </div>
       <div class="flex gap-2 mb-4">
-        <input id="playerInput" class="flex-1 p-4 border rounded-xl outline-none focus:border-blue-400" placeholder="New Player Name">
+        <input id="playerInput" class="flex-1 p-4 border rounded-xl outline-none" placeholder="Player Name">
         <button onclick="addPlayer()" class="bg-blue-600 text-white px-6 rounded-xl font-bold">Add</button>
       </div>
       <div id="playersList" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
@@ -51,19 +59,18 @@
 
     <div class="glass-card border-slate-100">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="font-black uppercase text-xs tracking-widest text-blue-500">The Waiting Bench</h3>
-        <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase"><span id="benchCount">0</span> Resting</span>
+        <h3 class="font-black uppercase text-xs tracking-widest text-blue-500">The Bench</h3>
+        <span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-bold"><span id="benchCount">0</span> Resting</span>
       </div>
-      <div id="benchList" class="grid grid-cols-2 gap-2">
-        </div>
+      <div id="benchList" class="grid grid-cols-2 gap-2"></div>
     </div>
 
     <div class="glass-card space-y-4 border-orange-100 shadow-lg shadow-orange-50">
       <div class="flex justify-between items-center">
-        <label class="font-bold text-slate-600">Courts Available</label>
+        <label class="font-bold text-slate-600">Courts</label>
         <input id="courtsInput" type="number" value="1" class="w-16 p-2 border rounded-xl text-center font-bold text-orange-600 bg-orange-50">
       </div>
-      <button onclick="smartRotate()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg shadow-md uppercase">Generate Next Rotation</button>
+      <button onclick="smartRotate()" class="w-full bg-orange-500 text-white py-5 rounded-2xl font-black text-lg shadow-md uppercase tracking-tight">Generate Rotation</button>
     </div>
 
     <div id="allRoundsContainer" class="space-y-6 pb-20"></div>
@@ -71,7 +78,7 @@
 
   <div id="view-stats" class="hidden">
     <div class="bg-white border rounded-[32px] overflow-hidden">
-      <div class="p-8 bg-slate-50 border-b font-black uppercase text-center tracking-widest">Tournament Rankings</div>
+      <div class="p-8 bg-slate-50 border-b font-black uppercase text-center tracking-widest">Rankings</div>
       <table class="w-full">
         <tbody id="leaderboardBody" class="divide-y divide-slate-100"></tbody>
       </table>
@@ -103,6 +110,8 @@ function loadArena() {
   if (params.get("meet")) {
     meetId = params.get("meet");
     document.getElementById("setupArea").classList.add("hidden");
+    document.getElementById("shareSection").classList.remove("hidden");
+    document.getElementById("shareLink").value = window.location.href;
     db.ref("tournaments/" + meetId).on("value", snap => {
       const data = snap.val() || {};
       players = data.players || [];
@@ -110,6 +119,15 @@ function loadArena() {
       renderAll();
     });
   }
+}
+
+function createTournament() {
+  const name = document.getElementById("tournamentName").value.trim();
+  if(!name) return;
+  meetId = name.replace(/\s+/g,'-').toLowerCase();
+  db.ref("tournaments/" + meetId).update({ name, createdAt: Date.now() }).then(() => {
+    window.location.search = "?meet=" + meetId;
+  });
 }
 
 function renderAll() {
@@ -147,7 +165,7 @@ function selectWinner(ri, mi, team) {
 }
 
 function smartRotate() {
-  const activePlayers = players.map(p => p.name);
+  const activeNames = players.map(p => p.name);
   const courts = parseInt(document.getElementById("courtsInput").value);
   
   let updatedRounds = allRounds.filter(r => r.some(m => m.status === "finished" || m.status === "playing"));
@@ -156,14 +174,14 @@ function smartRotate() {
       if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB);
   }));
 
-  let available = activePlayers.filter(p => !busyPlayers.includes(p));
+  let available = activeNames.filter(p => !busyPlayers.includes(p));
   available.sort((a,b) => {
       const pA = players.find(x => x.name === a);
       const pB = players.find(x => x.name === b);
       return (pA.gamesPlayed || 0) - (pB.gamesPlayed || 0);
   });
 
-  if (available.length < 4) return alert("Not enough free players!");
+  if (available.length < 4) return alert("Need at least 4 resting players!");
 
   let newMatches = [];
   for(let i=0; i < courts; i++) {
@@ -185,8 +203,8 @@ function renderPlayers() {
   document.getElementById("totalRegCount").innerText = players.length;
   document.getElementById("playersList").innerHTML = players.map((p, i) => `
     <div class="flex items-center justify-between p-3 border rounded-xl bg-slate-50 border-slate-100">
-      <span class="text-sm font-bold uppercase text-slate-700">${p.name} <small class="text-slate-400 font-normal ml-2">${p.gamesPlayed || 0} Games</small></span>
-      <button onclick="removePlayer(${i})" class="text-red-300 hover:text-red-500 text-xs font-bold px-2">Remove</button>
+      <span class="text-sm font-bold uppercase">${p.name} <small class="text-slate-400 font-normal ml-2">${p.gamesPlayed || 0} Games</small></span>
+      <button onclick="removePlayer(${i})" class="text-red-300 text-xs px-2">✕</button>
     </div>`).join("");
 }
 
@@ -195,17 +213,11 @@ function renderBench() {
     allRounds.forEach(r => r.forEach(m => {
         if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB);
     }));
-
-    const resting = players.filter(p => !busyPlayers.includes(p));
+    const resting = players.filter(p => !busyPlayers.includes(p.name));
     document.getElementById("benchCount").innerText = resting.length;
-    
     document.getElementById("benchList").innerHTML = resting.length > 0 
-        ? resting.map(p => `
-            <div class="bg-blue-50/50 border border-blue-100 p-3 rounded-2xl text-center">
-                <div class="text-[10px] font-black uppercase text-blue-600 truncate">${p.name}</div>
-                <div class="text-[8px] font-bold text-blue-300 uppercase">Available</div>
-            </div>`).join("")
-        : `<div class="col-span-2 text-center text-[10px] py-4 text-slate-300 uppercase font-bold tracking-widest">Everyone is playing</div>`;
+        ? resting.map(p => `<div class="bg-blue-50/50 border border-blue-100 p-3 rounded-2xl text-center text-[10px] font-black uppercase text-blue-600">${p.name}</div>`).join("")
+        : `<div class="col-span-2 text-center text-[10px] py-4 text-slate-300 uppercase font-bold tracking-widest">No one waiting</div>`;
 }
 
 function renderAllRounds() {
@@ -215,23 +227,15 @@ function renderAllRounds() {
     r.forEach((m, mi) => {
       const isPlaying = m.status === "playing";
       const isFinished = m.status === "finished";
-      
       container.innerHTML += `
         <div class="match-card ${isPlaying ? 'match-active shadow-lg shadow-blue-100/50' : ''} space-y-4">
           <div class="flex justify-between items-center">
-            <span class="status-pill ${isFinished ? 'bg-slate-100 text-slate-400' : isPlaying ? 'bg-blue-600 text-white' : 'bg-orange-100 text-orange-600'}">
-                ${m.status}
-            </span>
-            ${!isFinished ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500 tracking-tighter">${isPlaying ? '' : 'START MATCH →'}</button>` : ''}
+            <span class="status-pill ${isFinished ? 'bg-slate-100 text-slate-400' : isPlaying ? 'bg-blue-600 text-white' : 'bg-orange-100 text-orange-600'}">${m.status}</span>
+            ${!isFinished ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500">${isPlaying ? '' : 'START MATCH →'}</button>` : ''}
           </div>
-          <div class="flex gap-2 items-center">
-            <button onclick="${isPlaying ? `selectWinner(${ri},${mi},'A')` : ''}" class="team-btn ${m.sA === '1' ? 'winner shadow-lg shadow-green-200' : ''}">
-                <div class="text-[11px] font-bold uppercase truncate">${m.tA[0]} & ${m.tA[1]}</div>
-            </button>
-            <div class="text-[9px] font-black text-slate-200">VS</div>
-            <button onclick="${isPlaying ? `selectWinner(${ri},${mi},'B')` : ''}" class="team-btn ${m.sB === '1' ? 'winner shadow-lg shadow-green-200' : ''}">
-                <div class="text-[11px] font-bold uppercase truncate">${m.tB[0]} & ${m.tB[1]}</div>
-            </button>
+          <div class="flex gap-2">
+            <button onclick="${isPlaying ? `selectWinner(${ri},${mi},'A')` : ''}" class="team-btn ${m.sA === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tA[0]} & ${m.tA[1]}</button>
+            <button onclick="${isPlaying ? `selectWinner(${ri},${mi},'B')` : ''}" class="team-btn ${m.sB === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tB[0]} & ${m.tB[1]}</button>
           </div>
         </div>`;
     });
@@ -239,31 +243,18 @@ function renderAllRounds() {
 }
 
 function renderLeaderboard() {
-  let s = {}; players.forEach(p => s[p.name] = { w: 0, pts: 0 });
+  let s = {}; players.forEach(p => s[p.name] = { pts: 0 });
   allRounds.forEach(r => r.forEach(m => {
-    if(m.sA === "1") { m.tA.forEach(p=>{if(s[p]){s[p].pts+=3; s[p].w++}}); }
-    if(m.sB === "1") { m.tB.forEach(p=>{if(s[p]){s[p].pts+=3; s[p].w++}}); }
+    if(m.sA === "1") m.tA.forEach(p=>{if(s[p])s[p].pts+=3});
+    if(m.sB === "1") m.tB.forEach(p=>{if(s[p])s[p].pts+=3});
   }));
   let sorted = Object.entries(s).sort((a,b) => b[1].pts - a[1].pts);
-  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `
-    <tr class="text-sm border-b border-slate-50">
-        <td class="p-6 font-black text-slate-300 w-12 text-center">#${i+1}</td>
-        <td class="font-bold uppercase text-slate-700">${n}</td>
-        <td class="text-right p-6 font-black text-blue-600 text-lg">${v.pts} <span class="text-[10px] text-slate-300 ml-1">PTS</span></td>
-    </tr>`).join("");
-}
-
-function createTournament() {
-  const name = document.getElementById("tournamentName").value.trim();
-  if(!name) return;
-  meetId = name.replace(/\s+/g,'-').toLowerCase();
-  db.ref("tournaments/" + meetId).update({ name, createdAt: Date.now() }).then(() => {
-    location.search = "?meet=" + meetId;
-  });
+  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `<tr class="border-b border-slate-50"><td class="p-6 font-black text-slate-300 w-12 text-center">#${i+1}</td><td class="font-bold uppercase text-slate-700">${n}</td><td class="text-right p-6 font-black text-blue-600 text-lg">${v.pts} <span class="text-[10px] text-slate-300">PTS</span></td></tr>`).join("");
 }
 
 function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds }); }
-function removePlayer(i) { if(confirm("Remove player?")) { players.splice(i,1); saveData(); } }
+function removePlayer(i) { if(confirm("Remove?")) { players.splice(i,1); saveData(); } }
+function copyLink() { const el = document.getElementById("shareLink"); el.select(); document.execCommand('copy'); alert("Link Copied!"); }
 
 loadArena();
 </script>
