@@ -1,80 +1,91 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <title>Live Standings | PadelPilot</title>
-</head>
-<body class="bg-slate-900 text-white p-10">
-  <div class="max-w-4xl mx-auto">
-    <h1 class="text-5xl font-black mb-10 text-center">LIVE <span class="text-blue-500">STANDINGS</span></h1>
-    
-    <div class="bg-slate-800 rounded-[40px] overflow-hidden border border-slate-700 shadow-2xl">
-      <table class="w-full text-left">
-        <thead class="bg-slate-700/50 text-slate-400 uppercase text-sm font-bold">
-          <tr>
-            <th class="p-8">Rank</th>
-            <th>Player</th>
-            <th class="text-center">Record</th>
-            <th class="text-right p-8">Points</th>
-          </tr>
-        </thead>
-        <tbody id="liveLeaderboard" class="text-2xl font-bold">
-          </tbody>
-      </table>
+<div id="view-stats" class="hidden space-y-6">
+  <div class="bg-white border rounded-[32px] shadow-sm overflow-hidden border-slate-200">
+    <div class="p-8 border-b bg-slate-50/50">
+        <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tighter text-center">Tournament Standings</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">
+              <th class="px-6 py-4 text-center">Rank</th>
+              <th class="px-6 py-4">Player</th>
+              <th class="px-6 py-4 text-center">W/L</th>
+              <th class="px-6 py-4 text-right">Points</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody" class="divide-y divide-slate-100"></tbody>
+        </table>
     </div>
   </div>
+</div>
 
-  <script>
-    // USE THE SAME CONFIG FROM YOUR ARENA PAGE
-    const firebaseConfig = {
-      apiKey: "AiZaSyAKJywAbSKpKHqOs1a-_nQVBuQGkFmF4d4",
-      authDomain: "padelpilot-b8e47.firebaseapp.com",
-      databaseURL: "https://padelpilot-b8e47-default-rtdb.firebaseio.com",
-      projectId: "padelpilot-b8e47"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+<script>
+function renderLeaderboard() {
+  let stats = {};
+  
+  // Initialize stats for all registered players
+  players.forEach(p => {
+    stats[p.name] = { wins: 0, losses: 0, pts: 0, total: 0 };
+  });
 
-    // Get the tournament ID from the URL (e.g., leaderboard.html?meet=my-tournament)
-    const params = new URLSearchParams(location.search);
-    const meetId = params.get("meet");
+  // Calculate from all finished rounds
+  allRounds.forEach(r => {
+    r.forEach(m => {
+      if (m.status === "finished") {
+        const teamAWon = m.sA === "1";
+        const teamBWon = m.sB === "1";
 
-    if (meetId) {
-      db.ref("tournaments/" + meetId).on("value", snap => {
-        const data = snap.val() || {};
-        const players = data.players || [];
-        const allRounds = data.rounds || [];
-        render(players, allRounds);
-      });
-    }
+        m.tA.forEach(p => {
+          if (stats[p]) {
+            stats[p].total++;
+            if (teamAWon) { stats[p].pts += 3; stats[p].wins++; }
+            else if (teamBWon) { stats[p].losses++; }
+          }
+        });
 
-    function render(players, allRounds) {
-      let stats = {};
-      players.forEach(p => stats[p.name] = { w: 0, l: 0, pts: 0 });
+        m.tB.forEach(p => {
+          if (stats[p]) {
+            stats[p].total++;
+            if (teamBWon) { stats[p].pts += 3; stats[p].wins++; }
+            else if (teamAWon) { stats[p].losses++; }
+          }
+        });
+      }
+    });
+  });
 
-      allRounds.forEach(r => r.forEach(m => {
-        if(m.sA === "1") { 
-            m.tA.forEach(p => { if(stats[p]) { stats[p].pts += 3; stats[p].w++; } });
-            m.tB.forEach(p => { if(stats[p]) stats[p].l++; });
-        }
-        if(m.sB === "1") { 
-            m.tB.forEach(p => { if(stats[p]) { stats[p].pts += 3; stats[p].w++; } });
-            m.tA.forEach(p => { if(stats[p]) stats[p].l++; });
-        }
-      }));
+  // Sort by Points, then by Win Percentage
+  let sorted = Object.entries(stats).sort((a, b) => {
+    if (b[1].pts !== a[1].pts) return b[1].pts - a[1].pts;
+    const rateA = a[1].total ? a[1].wins / a[1].total : 0;
+    const rateB = b[1].total ? b[1].wins / b[1].total : 0;
+    return rateB - rateA;
+  });
 
-      const sorted = Object.entries(stats).sort((a,b) => b[1].pts - a[1].pts);
-      document.getElementById("liveLeaderboard").innerHTML = sorted.map(([name, v], i) => `
-        <tr class="border-b border-slate-700">
-          <td class="p-8 text-slate-500">#${i+1}</td>
-          <td class="uppercase">${name}</td>
-          <td class="text-center text-slate-400">${v.w}W - ${v.l}L</td>
-          <td class="p-8 text-right text-blue-400 text-4xl">${v.pts}</td>
-        </tr>
-      `).join("");
-    }
-  </script>
-</body>
-</html>
+  document.getElementById("leaderboardBody").innerHTML = sorted.map(([name, data], i) => {
+    // Medal Logic
+    let rankDisplay = `#${i + 1}`;
+    let rowStyle = "";
+    if (i === 0) { rankDisplay = "🥇"; rowStyle = "bg-yellow-50/30"; }
+    else if (i === 1) { rankDisplay = "🥈"; }
+    else if (i === 2) { rankDisplay = "🥉"; }
+
+    return `
+      <tr class="${rowStyle} transition-colors">
+        <td class="px-6 py-6 font-black text-center text-lg ${i < 3 ? '' : 'text-slate-300'}">${rankDisplay}</td>
+        <td class="px-6 py-6">
+          <div class="font-bold uppercase text-slate-700">${name}</div>
+          <div class="text-[9px] text-slate-400 font-bold uppercase tracking-tight">${data.total} Matches Played</div>
+        </td>
+        <td class="px-6 py-6 text-center">
+           <span class="text-[11px] font-black text-slate-500">${data.wins}W</span>
+           <span class="text-[11px] font-black text-slate-300 ml-1">${data.losses}L</span>
+        </td>
+        <td class="px-6 py-6 text-right">
+          <span class="text-xl font-black text-blue-600">${data.pts}</span>
+          <span class="text-[10px] font-bold text-blue-300 ml-1 uppercase">Pts</span>
+        </td>
+      </tr>`;
+  }).join("");
+}
+</script>
