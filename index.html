@@ -35,13 +35,13 @@
 <div class="max-w-xl mx-auto px-5 py-6 space-y-8">
   <div class="text-center">
     <div class="text-4xl font-black tracking-tighter text-slate-900">PADELPILOT <span class="text-blue-600">ARENA</span></div>
-    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block tracking-widest">Admin Access</div>
+    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block tracking-widest text-center">Admin Access</div>
   </div>
 
   <div id="view-arena" class="space-y-8">
     
     <div id="infoDisplay" class="hidden glass-card border-blue-50 bg-blue-50/30 text-center py-4">
-        <div class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Match Details</div>
+        <div class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 text-center">Match Details</div>
         <div class="flex justify-around items-center">
             <div>
                 <div class="text-[9px] font-bold text-slate-400 uppercase">Location</div>
@@ -58,7 +58,7 @@
     <section id="setupArea" class="glass-card space-y-4">
       <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none font-bold" placeholder="Tournament Name">
       <div class="grid grid-cols-2 gap-4">
-        <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Location (e.g. Al Ain Courts)">
+        <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none" placeholder="Location">
         <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none">
       </div>
       <button onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold">Lock & Initialize</button>
@@ -72,7 +72,7 @@
     <div class="space-y-3">
       <div class="flex gap-2">
         <input id="playerInput" class="flex-1 p-5 border rounded-2xl text-lg outline-none focus:ring-2 ring-blue-100" placeholder="Enter Name">
-        <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold">Join</button>
+        <button onclick="addPlayer()" class="bg-blue-600 text-white px-8 rounded-2xl font-bold shadow-lg shadow-blue-100">Join</button>
       </div>
       <div class="glass-card">
         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Players (<span id="totalRegCount">0</span>)</div>
@@ -101,9 +101,20 @@
   </div>
 
   <div id="view-stats" class="hidden">
-    <div class="bg-white border rounded-[32px] overflow-hidden">
-      <div class="p-8 bg-slate-50 border-b font-black uppercase text-center tracking-widest">Rankings</div>
+    <div class="bg-white border rounded-[32px] overflow-hidden shadow-sm">
+      <div class="p-6 bg-slate-50 border-b flex justify-between items-center">
+        <h2 class="font-black uppercase tracking-tighter text-xl">Standings</h2>
+        <span class="text-[10px] bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-bold uppercase text-center">3 PTS / Win</span>
+      </div>
       <table class="w-full">
+        <thead>
+          <tr class="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50 border-b">
+            <th class="px-6 py-3 text-center">Rank</th>
+            <th class="px-6 py-3 text-left">Player</th>
+            <th class="px-6 py-3 text-center">W / L</th>
+            <th class="px-6 py-3 text-right">Points</th>
+          </tr>
+        </thead>
         <tbody id="leaderboardBody" class="divide-y divide-slate-100"></tbody>
       </table>
     </div>
@@ -137,14 +148,12 @@ function loadArena() {
     document.getElementById("setupArea").classList.add("hidden");
     document.getElementById("shareSection").classList.remove("hidden");
     document.getElementById("shareLink").value = window.location.href;
-    
     db.ref("tournaments/" + meetId).on("value", snap => {
       const data = snap.val() || {};
       players = data.players || [];
       allRounds = data.rounds || [];
       registeredIPs = data.registeredIPs || [];
       startTime = data.time || "";
-      
       if(data.location) {
           document.getElementById("infoDisplay").classList.remove("hidden");
           document.getElementById("locText").innerText = data.location;
@@ -158,28 +167,19 @@ function loadArena() {
 
 function checkTimeLock() {
     if (isAdmin || !startTime) return;
-    
     const now = new Date();
     const [hours, minutes] = startTime.split(':');
     const target = new Date();
     target.setHours(hours, minutes, 0, 0);
-
     const isLocked = now < target;
     const btn = document.getElementById("rotateBtn");
     const notice = document.getElementById("lockNotice");
-
     if(isLocked) {
-        btn.disabled = true;
-        btn.classList.add("locked-btn");
-        notice.classList.remove("hidden");
+        btn.disabled = true; btn.classList.add("locked-btn"); notice.classList.remove("hidden");
     } else {
-        btn.disabled = false;
-        btn.classList.remove("locked-btn");
-        notice.classList.add("hidden");
+        btn.disabled = false; btn.classList.remove("locked-btn"); notice.classList.add("hidden");
     }
 }
-
-// Check every minute
 setInterval(checkTimeLock, 60000);
 
 function createTournament() {
@@ -188,16 +188,13 @@ function createTournament() {
   const time = document.getElementById("tournamentTime").value;
   if(!name) return;
   meetId = name.replace(/\s+/g,'-').toLowerCase();
-  db.ref("tournaments/" + meetId).update({ name, location: loc, time: time, createdAt: Date.now() }).then(() => { 
-      window.location.search = "?meet=" + meetId; 
-  });
+  db.ref("tournaments/" + meetId).update({ name, location: loc, time: time, createdAt: Date.now() }).then(() => { window.location.search = "?meet=" + meetId; });
 }
 
 function addPlayer() {
   if(!isAdmin && registeredIPs.includes(userIP)) return alert("Already joined!");
   const name = document.getElementById("playerInput").value.trim().toLowerCase();
   if(!name || players.some(p => p.name === name)) return;
-  // DEFAULT AWAY: checkedIn is false
   players.push({ name, checkedIn: false, gamesPlayed: 0 });
   if(!isAdmin) registeredIPs.push(userIP);
   saveData();
@@ -209,12 +206,9 @@ function smartRotate() {
   let updatedRounds = allRounds.filter(r => r.some(m => m.status === "finished" || m.status === "playing"));
   let busyPlayers = [];
   updatedRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB); }));
-  
   let available = players.filter(p => p.checkedIn && !busyPlayers.includes(p.name));
   available.sort(() => Math.random() - 0.5);
-
   if (available.length < 4) return alert("Not enough READY players!");
-
   let newMatches = [];
   for(let i=0; i < courts; i++) {
       if(available.length >= 4) {
@@ -226,30 +220,69 @@ function smartRotate() {
   saveData();
 }
 
-// Rest of your functions (toggleCheckIn, renderPlayers, toggleMatch, selectWinner, etc.) stay the same as the previous version.
+function renderLeaderboard() {
+  let stats = {};
+  players.forEach(p => { stats[p.name] = { wins: 0, losses: 0, pts: 0, total: 0 }; });
+
+  allRounds.forEach(r => {
+    r.forEach(m => {
+      if (m.status === "finished") {
+        const teamAWon = m.sA === "1";
+        const teamBWon = m.sB === "1";
+        m.tA.forEach(pName => {
+          if (stats[pName]) {
+            stats[pName].total++;
+            if (teamAWon) { stats[pName].pts += 3; stats[pName].wins++; }
+            else if (teamBWon) { stats[pName].losses++; }
+          }
+        });
+        m.tB.forEach(pName => {
+          if (stats[pName]) {
+            stats[pName].total++;
+            if (teamBWon) { stats[pName].pts += 3; stats[pName].wins++; }
+            else if (teamAWon) { stats[pName].losses++; }
+          }
+        });
+      }
+    });
+  });
+
+  let sorted = Object.entries(stats).sort((a, b) => b[1].pts - a[1].pts || b[1].wins - a[1].wins);
+  const tbody = document.getElementById("leaderboardBody");
+  if (!tbody) return;
+
+  tbody.innerHTML = sorted.map(([name, data], i) => {
+    let rank = `#${i + 1}`, medal = "text-slate-300", bg = "";
+    if (i === 0) { rank = "🥇"; medal = "text-2xl"; bg = "bg-yellow-50/20"; }
+    else if (i === 1) { rank = "🥈"; medal = "text-2xl"; }
+    else if (i === 2) { rank = "🥉"; medal = "text-2xl"; }
+
+    return `<tr class="${bg}">
+        <td class="px-6 py-5 text-center font-black ${medal}">${rank}</td>
+        <td class="px-6 py-5"><div class="font-bold uppercase text-slate-800 text-sm">${name}</div><div class="text-[9px] font-bold text-slate-400 uppercase">${data.total} Games</div></td>
+        <td class="px-6 py-5 text-center font-bold text-[11px]"><span class="text-green-600">${data.wins}W</span> <span class="text-slate-400 ml-1">${data.losses}L</span></td>
+        <td class="px-6 py-5 text-right font-black text-blue-600 text-lg">${data.pts}</td>
+      </tr>`;
+  }).join("");
+}
+
 function toggleCheckIn(i) { players[i].checkedIn = !players[i].checkedIn; saveData(); }
 function toggleMatch(ri, mi) { const m = allRounds[ri][mi]; if (m.status === "waiting") m.status = "playing"; saveData(); }
 function selectWinner(ri, mi, team) {
-  const match = allRounds[ri][mi];
-  match.sA = (team === 'A') ? "1" : "0"; match.sB = (team === 'B') ? "1" : "0";
-  match.status = "finished";
-  [...match.tA, ...match.tB].forEach(pName => { const p = players.find(x => x.name === pName); if(p) p.gamesPlayed = (p.gamesPlayed || 0) + 1; });
+  const m = allRounds[ri][mi]; m.sA = (team === 'A') ? "1" : "0"; m.sB = (team === 'B') ? "1" : "0"; m.status = "finished";
+  [...m.tA, ...m.tB].forEach(pName => { const p = players.find(x => x.name === pName); if(p) p.gamesPlayed = (p.gamesPlayed || 0) + 1; });
   saveData();
 }
+
 function renderPlayers() {
   document.getElementById("totalRegCount").innerText = players.length;
   document.getElementById("playersList").innerHTML = players.map((p, i) => `
     <div class="flex items-center justify-between p-3 border rounded-xl bg-slate-50">
-      <div class="flex items-center gap-3">
-        <span class="text-sm font-bold uppercase">${p.name}</span>
-        ${p.checkedIn ? '<span class="ready-badge">READY</span>' : '<span class="away-badge">AWAY</span>'}
-      </div>
-      <div class="flex gap-2">
-        <button onclick="toggleCheckIn(${i})" class="text-[9px] font-black px-2 py-1 bg-white border rounded shadow-sm">${p.checkedIn ? 'GO AWAY' : 'I\'M READY'}</button>
-        ${isAdmin ? `<button onclick="removePlayer(${i})" class="text-red-400 px-2">✕</button>` : ''}
-      </div>
+      <div class="flex items-center gap-3"><span class="text-sm font-bold uppercase">${p.name}</span>${p.checkedIn ? '<span class="ready-badge">READY</span>' : '<span class="away-badge">AWAY</span>'}</div>
+      <div class="flex gap-2"><button onclick="toggleCheckIn(${i})" class="text-[9px] font-black px-2 py-1 bg-white border rounded shadow-sm">${p.checkedIn ? 'GO AWAY' : 'I\'M READY'}</button>${isAdmin ? `<button onclick="removePlayer(${i})" class="text-red-400 px-2">✕</button>` : ''}</div>
     </div>`).join("");
 }
+
 function renderBench() {
     let busyPlayers = [];
     allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busyPlayers.push(...m.tA, ...m.tB); }));
@@ -257,34 +290,27 @@ function renderBench() {
     document.getElementById("benchCount").innerText = resting.length;
     document.getElementById("benchList").innerHTML = resting.map(p => `<div class="bg-blue-50/50 border border-blue-100 p-3 rounded-2xl text-center text-[10px] font-black uppercase text-blue-600">${p.name}</div>`).join("");
 }
+
 function renderAllRounds() {
   const container = document.getElementById("allRoundsContainer"); container.innerHTML = "";
   allRounds.slice().reverse().forEach((r, riInv) => {
     const ri = allRounds.length - 1 - riInv;
     r.forEach((m, mi) => {
-      const isPlaying = m.status === "playing"; const isFinished = m.status === "finished";
-      container.innerHTML += `<div class="match-card ${isPlaying ? 'match-active shadow-lg' : ''} space-y-4">
+      const isP = m.status === "playing", isF = m.status === "finished";
+      container.innerHTML += `<div class="match-card ${isP ? 'match-active shadow-lg' : ''} space-y-4">
           <div class="flex justify-between items-center">
-            <span class="status-pill ${isFinished ? 'bg-slate-100 text-slate-400' : isPlaying ? 'bg-blue-600 text-white' : 'bg-orange-100 text-orange-600'}">${m.status}</span>
-            ${!isFinished ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500">${isPlaying ? '' : 'START MATCH →'}</button>` : ''}
+            <span class="status-pill ${isF ? 'bg-slate-100 text-slate-400' : isP ? 'bg-blue-600 text-white' : 'bg-orange-100 text-orange-600'}">${m.status}</span>
+            ${!isF ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500">${isP ? '' : 'START MATCH →'}</button>` : ''}
           </div>
           <div class="flex gap-2">
-            <button onclick="${isPlaying ? `selectWinner(${ri},${mi},'A')` : ''}" class="team-btn ${m.sA === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tA[0]} & ${m.tA[1]}</button>
-            <button onclick="${isPlaying ? `selectWinner(${ri},${mi},'B')` : ''}" class="team-btn ${m.sB === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tB[0]} & ${m.tB[1]}</button>
+            <button onclick="${isP ? `selectWinner(${ri},${mi},'A')` : ''}" class="team-btn ${m.sA === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tA[0]} & ${m.tA[1]}</button>
+            <button onclick="${isP ? `selectWinner(${ri},${mi},'B')` : ''}" class="team-btn ${m.sB === '1' ? 'winner' : ''} text-[11px] font-bold uppercase truncate">${m.tB[0]} & ${m.tB[1]}</button>
           </div>
         </div>`;
     });
   });
 }
-function renderLeaderboard() {
-  let s = {}; players.forEach(p => s[p.name] = { pts: 0 });
-  allRounds.forEach(r => r.forEach(m => {
-    if(m.sA === "1") m.tA.forEach(p=>{if(s[p])s[p].pts+=3});
-    if(m.sB === "1") m.tB.forEach(p=>{if(s[p])s[p].pts+=3});
-  }));
-  let sorted = Object.entries(s).sort((a,b) => b[1].pts - a[1].pts);
-  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n,v], i) => `<tr class="border-b border-slate-50"><td class="p-6 font-black text-slate-300 w-12 text-center">#${i+1}</td><td class="font-bold uppercase text-slate-700">${n}</td><td class="text-right p-6 font-black text-blue-600 text-lg">${v.pts} <span class="text-[10px] text-slate-300">PTS</span></td></tr>`).join("");
-}
+
 function unlockDev() { if(prompt("Pass:") === "padel-dev-123") { isAdmin = true; document.getElementById("devIndicator").classList.remove("hidden"); document.getElementById("adminResetContainer").classList.remove("hidden"); checkTimeLock(); renderAll(); } }
 function switchTab(t) { document.getElementById('view-arena').classList.toggle('hidden', t !== 'arena'); document.getElementById('view-stats').classList.toggle('hidden', t !== 'stats'); document.getElementById('tab-arena').classList.toggle('active', t === 'arena'); document.getElementById('tab-stats').classList.toggle('active', t === 'stats'); }
 function renderAll() { renderPlayers(); renderBench(); renderAllRounds(); renderLeaderboard(); }
