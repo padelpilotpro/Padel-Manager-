@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PadelPilot Arena | Pro v3.5</title>
+  <title>PadelPilot Arena | Pro v3.7</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -40,11 +40,10 @@
 <div class="max-w-xl mx-auto px-5 py-6 space-y-8">
   <div class="text-center">
     <div class="text-4xl font-black tracking-tighter text-slate-900 uppercase">PADELPILOT <span class="text-blue-600">ARENA</span></div>
-    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block tracking-widest">Admin Access</div>
+    <div id="devIndicator" class="hidden text-red-500 text-[10px] font-black uppercase mt-2 bg-red-50 px-3 py-1 rounded-full border border-red-100 inline-block tracking-widest text-center">Admin Access</div>
   </div>
 
   <div id="view-arena" class="space-y-8">
-    
     <div id="infoDisplay" class="hidden glass-card border-blue-50 bg-blue-50/30 text-center py-4">
         <div id="tourneyTitle" class="text-sm font-black text-slate-800 uppercase mb-3">---</div>
         <div class="flex justify-around items-center px-2">
@@ -63,8 +62,8 @@
     <section id="setupArea" class="glass-card space-y-4">
       <div class="text-xs font-black uppercase text-slate-400 mb-2">Tournament Setup</div>
       <input id="tournamentName" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none font-bold" placeholder="Tournament Name">
-      <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none text-sm" placeholder="Location Name (e.g. Al Ain Square)">
-      <input id="tournamentMap" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none text-[10px]" placeholder="Paste Google Maps Share Link (Optional)">
+      <input id="tournamentLocation" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none text-sm" placeholder="Location Name">
+      <input id="tournamentMap" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none text-[10px]" placeholder="Google Maps Link (Optional)">
       <div class="grid grid-cols-2 gap-4">
         <input id="tournamentDate" type="date" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none text-sm">
         <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none text-sm">
@@ -101,15 +100,15 @@
             <div id="manualBuilder" class="hidden space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-2">
-                        <select id="p1" class="w-full p-3 rounded-xl border text-xs font-bold bg-white"></select>
-                        <select id="p2" class="w-full p-3 rounded-xl border text-xs font-bold bg-white"></select>
+                        <select id="p1" class="w-full p-3 rounded-xl border text-xs font-bold bg-white outline-none"></select>
+                        <select id="p2" class="w-full p-3 rounded-xl border text-xs font-bold bg-white outline-none"></select>
                     </div>
                     <div class="space-y-2">
-                        <select id="p3" class="w-full p-3 rounded-xl border text-xs font-bold bg-white"></select>
-                        <select id="p4" class="w-full p-3 rounded-xl border text-xs font-bold bg-white"></select>
+                        <select id="p3" class="w-full p-3 rounded-xl border text-xs font-bold bg-white outline-none"></select>
+                        <select id="p4" class="w-full p-3 rounded-xl border text-xs font-bold bg-white outline-none"></select>
                     </div>
                 </div>
-                <button onclick="createManualMatch()" class="w-full bg-purple-600 text-white py-4 rounded-2xl font-black text-xs uppercase">Pitch Custom Match</button>
+                <button onclick="createManualMatch()" class="w-full bg-purple-600 text-white py-4 rounded-2xl font-black text-xs uppercase shadow-lg shadow-purple-100">Pitch Matchup</button>
             </div>
         </div>
     </div>
@@ -139,6 +138,7 @@
           <tr class="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50 border-b">
             <th class="px-4 py-3 text-center">Rank</th>
             <th class="px-4 py-3 text-left">Player</th>
+            <th class="px-4 py-3 text-center">W/D/L</th>
             <th class="px-4 py-3 text-center">+/-</th>
             <th class="px-4 py-3 text-right">Pts</th>
           </tr>
@@ -150,14 +150,13 @@
 
   <div class="text-center py-10 opacity-30">
     <button onclick="unlockDev()" class="text-[10px] font-bold uppercase tracking-[0.4em]">Developer Access</button>
-    <div id="adminResetContainer" class="hidden mt-4">
-        <button onclick="masterReset()" class="text-[10px] text-red-500 font-bold border border-red-100 px-4 py-2 rounded-full">Reset Tournament Data</button>
+    <div id="adminResetContainer" class="hidden mt-4 flex justify-center gap-2">
+        <button onclick="masterReset()" class="text-[10px] text-red-500 font-bold border border-red-100 px-4 py-2 rounded-full">Reset Data</button>
     </div>
   </div>
 </div>
 
 <script>
-// FIREBASE CONFIGURATION
 const firebaseConfig = {
   apiKey: "AiZaSyAKJywAbSKpKHqOs1a-_nQVBuQGkFmF4d4",
   authDomain: "padelpilot-b8e47.firebaseapp.com",
@@ -169,11 +168,7 @@ const db = firebase.database();
 
 let meetId = null, players = [], allRounds = [], registeredIPs = [], isAdmin = false, userIP = "", startTime = "", startDate = "", manualModeActive = false;
 
-// 1. INITIALIZE APP
-fetch('https://api.ipify.org?format=json')
-  .then(r => r.json())
-  .then(d => { userIP = d.ip; loadArena(); })
-  .catch(() => loadArena());
+fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => { userIP = d.ip; loadArena(); }).catch(() => loadArena());
 
 function loadArena() {
   const params = new URLSearchParams(location.search);
@@ -182,187 +177,138 @@ function loadArena() {
     document.getElementById("setupArea").classList.add("hidden");
     document.getElementById("shareSection").classList.remove("hidden");
     document.getElementById("shareLink").value = window.location.href;
-    
     db.ref("tournaments/" + meetId).on("value", snap => {
-      const data = snap.val() || {};
-      players = data.players || [];
-      allRounds = data.rounds || [];
-      registeredIPs = data.registeredIPs || [];
-      startTime = data.time || "";
-      startDate = data.date || "";
-      
-      if(data.name) {
+      const d = snap.val() || {};
+      players = d.players || []; allRounds = d.rounds || []; registeredIPs = d.registeredIPs || [];
+      startTime = d.time || ""; startDate = d.date || "";
+      if(d.name) {
           document.getElementById("infoDisplay").classList.remove("hidden");
-          document.getElementById("tourneyTitle").innerText = data.name;
-          const locDiv = document.getElementById("locContainer");
-          locDiv.innerHTML = data.mapLink ? `<a href="${data.mapLink}" target="_blank" class="text-blue-600 underline">📍 ${data.location || 'Location'}</a>` : (data.location || "---");
-          document.getElementById("dateTimeText").innerText = `${data.date || ''} @ ${data.time || ''}`;
+          document.getElementById("tourneyTitle").innerText = d.name;
+          const lc = document.getElementById("locContainer");
+          lc.innerHTML = d.mapLink ? `<a href="${d.mapLink}" target="_blank" class="text-blue-600 underline">📍 ${d.location || 'Location'}</a>` : (d.location || "---");
+          document.getElementById("dateTimeText").innerText = `${d.date || ''} @ ${d.time || ''}`;
       }
       checkTimeLock(); renderAll();
     });
   }
 }
 
-// 2. CORE ACTIONS
-function createTournament() {
-  const n = document.getElementById("tournamentName").value.trim();
-  const l = document.getElementById("tournamentLocation").value.trim();
-  const m = document.getElementById("tournamentMap").value.trim();
-  const d = document.getElementById("tournamentDate").value;
-  const t = document.getElementById("tournamentTime").value;
-  if(!n) return alert("Please name your tournament!");
-  meetId = n.replace(/\s+/g,'-').toLowerCase();
-  db.ref("tournaments/" + meetId).update({ name: n, location: l, mapLink: m, date: d, time: t, createdAt: Date.now() })
-    .then(() => { window.location.search = "?meet=" + meetId; });
-}
-
-function addPlayer() {
-  const n = document.getElementById("playerInput").value.trim().toLowerCase();
-  if(!n) return;
-  if(players.some(p => p.name === n)) return alert("Name already registered!");
-  if(!isAdmin && registeredIPs && registeredIPs.includes(userIP)) return alert("One player per device only!");
-
-  players.push({ name: n, checkedIn: false, gamesPlayed: 0 });
-  if(!isAdmin) { if(!registeredIPs) registeredIPs = []; registeredIPs.push(userIP); }
-  saveData();
-  document.getElementById("playerInput").value = "";
-}
-
-function smartRotate() {
-  const courts = parseInt(document.getElementById("courtsInput").value);
-  let busy = [];
-  allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busy.push(...m.tA, ...m.tB); }));
-  let available = players.filter(p => p.checkedIn && !busy.includes(p.name));
-  available.sort((a, b) => (a.gamesPlayed || 0) - (b.gamesPlayed || 0));
-  if (available.length < 4) return alert("Need at least 4 ready players!");
-  
-  let newMatches = [];
-  for(let i=0; i < courts && available.length >= 4; i++) {
-    available.sort(() => Math.random() - 0.5);
-    newMatches.push({ tA: [available.shift().name, available.shift().name], tB: [available.shift().name, available.shift().name], sA: "", sB: "", status: "waiting" });
-  }
-  if(newMatches.length > 0) { allRounds.push(newMatches); saveData(); }
-}
-
-function submitScore(ri, mi) {
-    const sA = document.getElementById(`sA-${ri}-${mi}`).value;
-    const sB = document.getElementById(`sB-${ri}-${mi}`).value;
-    if(sA === "" || sB === "") return alert("Enter scores for both teams!");
-    
-    allRounds[ri][mi].sA = parseInt(sA);
-    allRounds[ri][mi].sB = parseInt(sB);
-    allRounds[ri][mi].status = "finished";
-    
-    [...allRounds[ri][mi].tA, ...allRounds[ri][mi].tB].forEach(name => {
-        const p = players.find(x => x.name === name);
-        if(p) p.gamesPlayed = (p.gamesPlayed || 0) + 1;
-    });
-    saveData();
-}
-
-// 3. MANUAL BUILDER LOGIC
-function toggleManualMode() {
-    manualModeActive = !manualModeActive;
-    document.getElementById("manualBuilder").classList.toggle("hidden", !manualModeActive);
-    document.getElementById("manualToggleBtn").innerText = manualModeActive ? "Close Builder" : "Open Builder";
-    if(manualModeActive) updateManualDropdowns();
-}
-
-function updateManualDropdowns() {
-    let busy = [];
-    allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busy.push(...m.tA, ...m.tB); }));
-    const available = players.filter(p => p.checkedIn && !busy.includes(p.name));
-    ['p1', 'p2', 'p3', 'p4'].forEach(id => {
-        document.getElementById(id).innerHTML = `<option value="">Select Player</option>` + available.map(p => `<option value="${p.name}">${p.name.toUpperCase()}</option>`).join("");
-    });
-}
-
-function createManualMatch() {
-    const p = [document.getElementById("p1").value, document.getElementById("p2").value, document.getElementById("p3").value, document.getElementById("p4").value];
-    if (new Set(p.filter(x => x)).size < 4) return alert("Select 4 unique ready players!");
-    const m = { tA: [p[0], p[1]], tB: [p[2], p[3]], sA: "", sB: "", status: "waiting" };
-    if (allRounds.length === 0 || allRounds[allRounds.length-1][0].status === "finished") {
-        allRounds.push([m]);
-    } else {
-        allRounds[allRounds.length-1].push(m);
-    }
-    saveData(); toggleManualMode();
-}
-
-// 4. RENDERING & UI
 function renderAllRounds() {
-  const container = document.getElementById("allRoundsContainer");
-  container.innerHTML = "";
-  if (allRounds.length === 0) {
-    container.innerHTML = `<div class="text-center py-10 text-slate-300 font-bold text-xs uppercase">Waiting for first rotation...</div>`;
-    return;
-  }
+  const container = document.getElementById("allRoundsContainer"); container.innerHTML = "";
+  if (allRounds.length === 0) { container.innerHTML = `<div class="text-center py-10 text-slate-300 font-bold text-xs uppercase">No matches generated</div>`; return; }
 
   allRounds.slice().reverse().forEach((round, riInv) => {
     const ri = allRounds.length - 1 - riInv;
-    container.innerHTML += `<div class="text-[10px] font-black text-slate-400 uppercase mt-6 mb-2">Round ${ri + 1}</div>`;
+    container.innerHTML += `<div class="flex justify-between items-center mt-6 mb-2">
+        <div class="text-[10px] font-black text-slate-400 uppercase">Round ${ri + 1}</div>
+        ${isAdmin ? `<button onclick="deleteRound(${ri})" class="text-[9px] font-bold text-red-400 uppercase">Delete Round</button>` : ''}
+    </div>`;
     round.forEach((m, mi) => {
-      const isP = m.status === "playing", isF = m.status === "finished";
-      container.innerHTML += `
-        <div class="match-card ${isP ? 'match-active' : ''} space-y-4 mb-3">
-          <div class="flex justify-between items-center">
+      const isP = m.status === "playing", isF = m.status === "finished", canEdit = isAdmin || isP;
+      container.innerHTML += `<div class="match-card ${isP ? 'match-active' : ''} space-y-4 mb-3">
+        <div class="flex justify-between items-center">
             <span class="status-pill ${isF ? 'bg-slate-100 text-slate-400' : isP ? 'bg-blue-600 text-white' : 'bg-orange-100 text-orange-600'}">${m.status}</span>
-            ${!isF ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500">${isP ? '' : 'START MATCH'}</button>` : ''}
-          </div>
-          <div class="flex items-center gap-3">
-              <div class="flex-1 text-center">
-                <div class="text-[9px] font-black text-slate-400 uppercase truncate mb-1">${m.tA[0]} & ${m.tA[1]}</div>
-                <input type="number" id="sA-${ri}-${mi}" value="${m.sA || ''}" ${!isAdmin && !isP ? 'readonly' : ''} class="w-full p-3 border rounded-xl text-center font-bold bg-slate-50 outline-none">
-              </div>
-              <div class="text-slate-300 font-black text-xs">VS</div>
-              <div class="flex-1 text-center">
-                <div class="text-[9px] font-black text-slate-400 uppercase truncate mb-1">${m.tB[0]} & ${m.tB[1]}</div>
-                <input type="number" id="sB-${ri}-${mi}" value="${m.sB || ''}" ${!isAdmin && !isP ? 'readonly' : ''} class="w-full p-3 border rounded-xl text-center font-bold bg-slate-50 outline-none">
-              </div>
-          </div>
-          ${(isAdmin || isP) && !isF ? `<button onclick="submitScore(${ri},${mi})" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-[10px] uppercase">Submit Score</button>` : ''}
-        </div>`;
+            <div class="flex gap-3">
+                ${!isF ? `<button onclick="toggleMatch(${ri},${mi})" class="text-[10px] font-black uppercase text-blue-500">${isP ? '' : 'START'}</button>` : ''}
+                ${isAdmin ? `<button onclick="deleteMatch(${ri},${mi})" class="text-[10px] font-black text-red-500">×</button>` : ''}
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="flex-1 text-center"><div class="text-[9px] font-black uppercase text-slate-400 truncate mb-1">${m.tA[0]} & ${m.tA[1]}</div>
+            <input type="number" id="sA-${ri}-${mi}" value="${m.sA !== undefined ? m.sA : ''}" ${!canEdit ? 'readonly' : ''} class="w-full p-3 border rounded-xl text-center font-bold ${isAdmin ? 'bg-white border-blue-200' : 'bg-slate-50'}"></div>
+            <div class="text-slate-300 font-black text-xs">VS</div>
+            <div class="flex-1 text-center"><div class="text-[9px] font-black uppercase text-slate-400 truncate mb-1">${m.tB[0]} & ${m.tB[1]}</div>
+            <input type="number" id="sB-${ri}-${mi}" value="${m.sB !== undefined ? m.sB : ''}" ${!canEdit ? 'readonly' : ''} class="w-full p-3 border rounded-xl text-center font-bold ${isAdmin ? 'bg-white border-blue-200' : 'bg-slate-50'}"></div>
+        </div>
+        ${canEdit ? `<button onclick="submitScore(${ri},${mi})" class="w-full ${isF ? 'bg-slate-800' : 'bg-blue-600'} text-white py-3 rounded-xl font-bold text-[10px] uppercase">${isF ? 'Update Score' : 'Submit Score'}</button>` : ''}
+      </div>`;
     });
   });
 }
 
+function submitScore(ri, mi) {
+    const sA = document.getElementById(`sA-${ri}-${mi}`).value, sB = document.getElementById(`sB-${ri}-${mi}`).value;
+    if(sA === "" || sB === "") return alert("Enter scores!");
+    const oldStatus = allRounds[ri][mi].status;
+    allRounds[ri][mi].sA = parseInt(sA); allRounds[ri][mi].sB = parseInt(sB); allRounds[ri][mi].status = "finished";
+    if(oldStatus !== "finished") { [...allRounds[ri][mi].tA, ...allRounds[ri][mi].tB].forEach(n => { const p = players.find(x => x.name === n); if(p) p.gamesPlayed = (p.gamesPlayed || 0) + 1; }); }
+    saveData();
+}
+
 function renderLeaderboard() {
-  let s = {};
-  players.forEach(p => { s[p.name] = { w: 0, pts: 0, pf: 0, pa: 0, t: 0 }; });
-  allRounds.forEach(r => r.forEach(m => {
-    if (m.status === "finished") {
-      const a = parseInt(m.sA), b = parseInt(m.sB);
-      m.tA.forEach(p => { if(s[p]){ s[p].t++; s[p].pf+=a; s[p].pa+=b; if(a>b) s[p].pts+=3; else if(a===b) s[p].pts+=1; }});
-      m.tB.forEach(p => { if(s[p]){ s[p].t++; s[p].pf+=b; s[p].pa+=a; if(b>a) s[p].pts+=3; else if(a===b) s[p].pts+=1; }});
-    }
-  }));
-  let sorted = Object.entries(s).sort((a, b) => b[1].pts - a[1].pts || (b[1].pf - b[1].pa) - (a[1].pf - a[1].pa));
-  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n, d], i) => `<tr><td class="px-4 py-4 text-center font-black">${i+1}</td><td class="px-4 py-4"><div class="font-bold uppercase text-xs">${n}</div><div class="text-[8px] text-slate-400 font-bold">${d.t} GP</div></td><td class="px-4 py-4 text-center text-xs font-bold ${d.pf-d.pa>=0 ? 'text-green-500':'text-red-400'}">${d.pf-d.pa > 0 ? '+':''}${d.pf-d.pa}</td><td class="px-4 py-4 text-right font-black text-blue-600">${d.pts}</td></tr>`).join("");
+  let s = {}; players.forEach(p => { s[p.name] = { w:0, d:0, l:0, pts:0, pf:0, pa:0, t:0 }; });
+  allRounds.forEach(r => r.forEach(m => { if (m.status === "finished") {
+      const a = parseInt(m.sA) || 0, b = parseInt(m.sB) || 0;
+      m.tA.forEach(p => { if(s[p]){ s[p].t++; s[p].pf+=a; s[p].pa+=b; if(a>b){s[p].pts+=3; s[p].w++;} else if(a===b){s[p].pts+=1; s[p].d++;} else s[p].l++; }});
+      m.tB.forEach(p => { if(s[p]){ s[p].t++; s[p].pf+=b; s[p].pa+=a; if(b>a){s[p].pts+=3; s[p].w++;} else if(a===b){s[p].pts+=1; s[p].d++;} else s[p].l++; }});
+  }}));
+  let sorted = Object.entries(s).sort((a,b) => b[1].pts - a[1].pts || (b[1].pf-b[1].pa) - (a[1].pf-a[1].pa));
+  document.getElementById("leaderboardBody").innerHTML = sorted.map(([n, d], i) => {
+    let rk = i + 1; if(i===0) rk="🥇"; else if(i===1) rk="🥈"; else if(i===2) rk="🥉";
+    const diff = d.pf-d.pa;
+    return `<tr class="${i<3?'bg-blue-50/30':''}">
+        <td class="px-4 py-5 text-center font-black text-sm">${rk}</td>
+        <td class="px-4 py-5"><div class="font-bold uppercase text-xs">${n}</div><div class="text-[8px] text-slate-400 font-bold">${d.t} GP</div></td>
+        <td class="px-4 py-5 text-center text-[10px] font-bold text-slate-600">${d.w}-${d.d}-${d.l}</td>
+        <td class="px-4 py-5 text-center text-[10px] font-black ${diff>=0?'text-green-500':'text-red-400'}">${diff>0?'+':''}${diff}</td>
+        <td class="px-4 py-5 text-right font-black text-blue-600 text-sm">${d.pts}</td>
+    </tr>`;
+  }).join("");
 }
 
-function renderPlayers() {
-  document.getElementById("totalRegCount").innerText = players.length;
-  document.getElementById("playersList").innerHTML = players.map((p, i) => `<div class="flex items-center justify-between p-3 border rounded-xl bg-slate-50 mb-1"><div class="flex items-center gap-3"><span class="text-xs font-bold uppercase">${p.name}</span>${p.checkedIn ? '<span class="ready-badge">READY</span>' : '<span class="away-badge">AWAY</span>'}</div><button onclick="toggleCheckIn(${i})" class="text-[9px] font-black px-2 py-1 bg-white border rounded shadow-sm">${p.checkedIn ? 'AWAY' : 'READY'}</button></div>`).join("");
+function addPlayer() {
+  const n = document.getElementById("playerInput").value.trim().toLowerCase();
+  if(!n) return; if(players.some(p => p.name === n)) return alert("Taken!");
+  if(!isAdmin && registeredIPs && registeredIPs.includes(userIP)) return alert("One player per device!");
+  players.push({ name: n, checkedIn: false, gamesPlayed: 0 });
+  if(!isAdmin) { if(!registeredIPs) registeredIPs = []; registeredIPs.push(userIP); }
+  saveData(); document.getElementById("playerInput").value = "";
 }
 
-function renderBench() {
-  let busy = [];
+function deleteMatch(ri, mi) { if(isAdmin && confirm("Delete match?")) { allRounds[ri].splice(mi,1); if(allRounds[ri].length===0) allRounds.splice(ri,1); saveData(); } }
+function deleteRound(ri) { if(isAdmin && confirm("Delete Round?")) { allRounds.splice(ri,1); saveData(); } }
+function smartRotate() {
+  const c = parseInt(document.getElementById("courtsInput").value); let busy = [];
   allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busy.push(...m.tA, ...m.tB); }));
-  const resting = players.filter(p => p.checkedIn && !busy.includes(p.name));
-  document.getElementById("benchCount").innerText = resting.length;
-  document.getElementById("benchList").innerHTML = resting.map(p => `<div class="bg-blue-50 border border-blue-100 p-3 rounded-2xl text-center text-[10px] font-black uppercase text-blue-600">${p.name}</div>`).join("");
+  let av = players.filter(p => p.checkedIn && !busy.includes(p.name)).sort((a,b) => (a.gamesPlayed||0)-(b.gamesPlayed||0));
+  if (av.length < 4) return alert("Need 4 ready players!");
+  let nm = []; for(let i=0; i<c && av.length>=4; i++) { av.sort(()=>Math.random()-0.5); nm.push({ tA:[av.shift().name, av.shift().name], tB:[av.shift().name, av.shift().name], sA:"", sB:"", status:"waiting" }); }
+  if(nm.length>0) { allRounds.push(nm); saveData(); }
 }
 
-// 5. HELPERS & SYSTEM
+function createManualMatch() {
+    const p = [document.getElementById("p1").value, document.getElementById("p2").value, document.getElementById("p3").value, document.getElementById("p4").value];
+    if (new Set(p.filter(x=>x)).size < 4) return alert("Select 4 players!");
+    const m = { tA:[p[0],p[1]], tB:[p[2],p[3]], sA:"", sB:"", status:"waiting" };
+    if (allRounds.length===0) allRounds.push([m]); else allRounds[allRounds.length-1].push(m);
+    saveData(); toggleManualMode();
+}
+
+function toggleManualMode() { manualModeActive = !manualModeActive; document.getElementById("manualBuilder").classList.toggle("hidden", !manualModeActive); if(manualModeActive) updateManualDropdowns(); }
+function updateManualDropdowns() {
+    let busy = []; allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busy.push(...m.tA, ...m.tB); }));
+    const av = players.filter(p => p.checkedIn && !busy.includes(p.name));
+    ['p1','p2','p3','p4'].forEach(id => { document.getElementById(id).innerHTML = `<option value="">Player</option>` + av.map(p => `<option value="${p.name}">${p.name.toUpperCase()}</option>`).join(""); });
+}
+
+function createTournament() {
+  const n = document.getElementById("tournamentName").value.trim(); if(!n) return alert("Name it!");
+  meetId = n.replace(/\s+/g,'-').toLowerCase();
+  db.ref("tournaments/"+meetId).update({ name: n, location: document.getElementById("tournamentLocation").value, mapLink: document.getElementById("tournamentMap").value, date: document.getElementById("tournamentDate").value, time: document.getElementById("tournamentTime").value, createdAt: Date.now() })
+    .then(() => { window.location.search = "?meet=" + meetId; });
+}
+
+function renderPlayers() { document.getElementById("totalRegCount").innerText = players.length; document.getElementById("playersList").innerHTML = players.map((p, i) => `<div class="flex items-center justify-between p-3 border rounded-xl bg-slate-50 mb-1"><div class="flex items-center gap-3"><span class="text-xs font-bold uppercase">${p.name}</span>${p.checkedIn ? '<span class="ready-badge">READY</span>' : '<span class="away-badge">AWAY</span>'}</div><button onclick="toggleCheckIn(${i})" class="text-[9px] font-black px-2 py-1 bg-white border rounded shadow-sm">${p.checkedIn?'AWAY':'READY'}</button></div>`).join(""); }
+function renderBench() { let busy = []; allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busy.push(...m.tA, ...m.tB); })); const res = players.filter(p => p.checkedIn && !busy.includes(p.name)); document.getElementById("benchCount").innerText = res.length; document.getElementById("benchList").innerHTML = res.map(p => `<div class="bg-blue-50 border border-blue-100 p-3 rounded-2xl text-center text-[10px] font-black uppercase text-blue-600">${p.name}</div>`).join(""); }
 function toggleCheckIn(i) { players[i].checkedIn = !players[i].checkedIn; saveData(); }
 function toggleMatch(ri, mi) { allRounds[ri][mi].status = "playing"; saveData(); }
 function switchTab(t) { document.getElementById('view-arena').classList.toggle('hidden', t !== 'arena'); document.getElementById('view-stats').classList.toggle('hidden', t !== 'stats'); document.getElementById('tab-arena').classList.toggle('active', t === 'arena'); document.getElementById('tab-stats').classList.toggle('active', t === 'stats'); }
-function renderAll() { renderPlayers(); renderBench(); renderAllRounds(); renderLeaderboard(); if(manualModeActive) updateManualDropdowns(); }
+function renderAll() { renderPlayers(); renderBench(); renderAllRounds(); renderLeaderboard(); }
 function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds, registeredIPs }); }
-function checkTimeLock() { if (isAdmin || !startTime || !startDate) return; const now = new Date(); const [y, mon, d] = startDate.split('-'); const [h, m] = startTime.split(':'); const target = new Date(y, mon - 1, d, h, m); const isLocked = now < target; const btn = document.getElementById("rotateBtn"); btn.disabled = isLocked; btn.classList.toggle("locked-btn", isLocked); document.getElementById("lockNotice").classList.toggle("hidden", !isLocked); }
+function checkTimeLock() { if (isAdmin || !startTime || !startDate) return; const now = new Date(); const [y, mon, d] = startDate.split('-'); const [h, m] = startTime.split(':'); const tg = new Date(y, mon - 1, d, h, m); const isL = now < tg; const b = document.getElementById("rotateBtn"); b.disabled = isL; b.classList.toggle("locked-btn", isL); document.getElementById("lockNotice").classList.toggle("hidden", !isL); }
 function unlockDev() { if(prompt("Dev Pass:") === "padel-dev-123") { isAdmin = true; document.getElementById("devIndicator").classList.remove("hidden"); document.getElementById("adminResetContainer").classList.remove("hidden"); renderAll(); } }
-function masterReset() { if(confirm("Wipe all data?")) db.ref("tournaments/" + meetId).set(null).then(() => location.search = ""); }
-function copyLink() { navigator.clipboard.writeText(window.location.href); alert("Link copied!"); }
+function masterReset() { if(confirm("Wipe all?")) db.ref("tournaments/" + meetId).set(null).then(() => location.search = ""); }
+function copyLink() { navigator.clipboard.writeText(window.location.href); alert("Copied!"); }
 </script>
 </body>
 </html>
