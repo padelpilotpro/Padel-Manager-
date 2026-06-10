@@ -267,7 +267,6 @@ function submitScore(ri, mi) {
     const oldStatus = allRounds[ri][mi].status;
     allRounds[ri][mi].sA = parseInt(sA); allRounds[ri][mi].sB = parseInt(sB); allRounds[ri][mi].status = "finished";
     
-    // Inject structural timestamp signature for historical logging extraction queries
     if(!allRounds[ri][mi].timestamp) {
         allRounds[ri][mi].timestamp = Date.now();
     }
@@ -297,7 +296,6 @@ function renderLeaderboard() {
   }).join("");
 }
 
-// Monthly Log Computation Engine Engine
 function renderMonthlyLeaderboard() {
   const currentMonthName = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
   document.getElementById("currentMonthLabel").innerText = `Cumulative Standings • ${currentMonthName}`;
@@ -305,7 +303,6 @@ function renderMonthlyLeaderboard() {
   let s = {}; 
   players.forEach(p => { s[p.name] = { w:0, d:0, l:0, pts:0, pf:0, pa:0, t:0 }; });
 
-  // Compile matching metrics using the historical immutable logs
   historicalMatches.forEach(m => {
       const a = parseInt(m.sA) || 0, b = parseInt(m.sB) || 0;
       m.tA.forEach(p => { if(!s[p]) s[p] = { w:0, d:0, l:0, pts:0, pf:0, pa:0, t:0 }; s[p].t++; s[p].pf+=a; s[p].pa+=b; if(a>b){s[p].pts+=3; s[p].w++;} else if(a===b){s[p].pts+=1; s[p].d++;} else s[p].l++; });
@@ -392,9 +389,12 @@ function createManualMatch() {
 }
 
 function toggleManualMode() { manualModeActive = !manualModeActive; document.getElementById("manualBuilder").classList.toggle("hidden", !manualModeActive); if(manualModeActive) updateManualDropdowns(); }
+
+// FIXED: Filter adjusted to allow selecting from ALL registered players, not just checked-in ones.
 function updateManualDropdowns() {
     let busy = []; allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busy.push(...m.tA, ...m.tB); }));
-    const av = players.filter(p => p.checkedIn && !busy.includes(p.name));
+    const av = players.filter(p => !busy.includes(p.name));
+    av.sort((a, b) => a.name.localeCompare(b.name));
     ['p1','p2','p3','p4'].forEach(id => { document.getElementById(id).innerHTML = `<option value="">Player</option>` + av.map(p => `<option value="${p.name}">${p.name.toUpperCase()}</option>`).join(""); });
 }
 
@@ -424,11 +424,9 @@ function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ player
 function checkTimeLock() { if (isAdmin || !startTime || !startDate) return; const now = new Date(); const [y, mon, d] = startDate.split('-'); const [h, m] = startTime.split(':'); const tg = new Date(y, mon - 1, d, h, m); const isL = now < tg; const b = document.getElementById("rotateBtn"); b.disabled = isL; b.classList.toggle("locked-btn", isL); document.getElementById("lockNotice").classList.toggle("hidden", !isL); }
 function unlockDev() { if(prompt("Dev Pass:") === "padel-dev-123") { isAdmin = true; document.getElementById("devIndicator").classList.remove("hidden"); document.getElementById("adminResetContainer").classList.remove("hidden"); renderAll(); } }
 
-// Strategic Reset Modification: Commits weekly games into historical log before purging active layout
 function weeklyResetOnly() {
     if(!isAdmin) return alert("Admin authorization required!");
     if(confirm("Commit active games to the persistent Monthly Board and clear the active rounds display?")) {
-        // Collect completed matches from current active sets
         let matchesToCommit = [];
         allRounds.forEach(r => r.forEach(m => {
             if(m.status === "finished") {
@@ -436,10 +434,7 @@ function weeklyResetOnly() {
             }
         }));
         
-        // Merge into long-term history array securely
         historicalMatches = [...historicalMatches, ...matchesToCommit];
-        
-        // Purge active rounds board and reset player court match load counters
         allRounds = [];
         players.forEach(p => { p.gamesPlayed = 0; p.checkedIn = false; });
         
