@@ -34,6 +34,7 @@
   <div class="max-w-xl mx-auto flex bg-slate-200/50 p-1 rounded-2xl">
     <button onclick="switchTab('arena')" id="tab-arena" class="nav-tab active">Arena Hub</button>
     <button onclick="switchTab('stats')" id="tab-stats" class="nav-tab">Standings</button>
+    <button onclick="switchTab('monthly')" id="tab-monthly" class="nav-tab">Monthly Board</button>
   </div>
 </div>
 
@@ -120,7 +121,6 @@
       </div>
       <div class="glass-card">
         <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">All Registered (<span id="totalRegCount">0</span>)</div>
-        <!-- Fixed: Increased list container height threshold from max-h-40 to max-h-96 for clean, expansive roster scrolling -->
         <div id="playersList" class="space-y-2 max-h-96 overflow-y-auto pr-1"></div>
       </div>
     </div>
@@ -149,10 +149,42 @@
     </div>
   </div>
 
+  <div id="view-monthly" class="hidden space-y-4">
+    <div class="bg-white border rounded-[32px] overflow-hidden shadow-sm">
+      <div class="p-6 bg-slate-50 border-b flex flex-col sm:flex-row gap-4 justify-between sm:items-center">
+        <div>
+            <h2 class="font-black uppercase tracking-tighter text-xl">Monthly Board</h2>
+            <div id="currentMonthLabel" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Loading Stats...</div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="shareToWhatsApp()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition">
+                💬 WhatsApp
+            </button>
+            <button onclick="exportToCSV()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition">
+                📊 Spreadsheet
+            </button>
+        </div>
+      </div>
+      <table class="w-full">
+        <thead>
+          <tr class="text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50 border-b">
+            <th class="px-4 py-3 text-center">Rank</th>
+            <th class="px-4 py-3 text-left">Player</th>
+            <th class="px-4 py-3 text-center">W/D/L</th>
+            <th class="px-4 py-3 text-center">+/-</th>
+            <th class="px-4 py-3 text-right">Pts</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyLeaderboardBody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="text-center py-10 opacity-30">
     <button onclick="unlockDev()" class="text-[10px] font-bold uppercase tracking-[0.4em]">Developer Access</button>
     <div id="adminResetContainer" class="hidden mt-4 flex justify-center gap-2">
-        <button onclick="masterReset()" class="text-[10px] text-red-500 font-bold border border-red-100 px-4 py-2 rounded-full">Reset Data</button>
+        <button onclick="weeklyResetOnly()" class="text-[10px] text-orange-600 font-bold border border-orange-100 px-4 py-2 rounded-full bg-orange-50/50">Reset Weekly Games</button>
+        <button onclick="masterReset()" class="text-[10px] text-red-500 font-bold border border-red-100 px-4 py-2 rounded-full">Reset All Data</button>
     </div>
   </div>
 </div>
@@ -167,7 +199,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let meetId = null, players = [], allRounds = [], registeredIPs = [], isAdmin = false, userIP = "", startTime = "", startDate = "", manualModeActive = false;
+let meetId = null, players = [], allRounds = [], historicalMatches = [], registeredIPs = [], isAdmin = false, userIP = "", startTime = "", startDate = "", manualModeActive = false;
+let computedMonthlyRanking = [];
 
 fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => { userIP = d.ip; loadArena(); }).catch(() => loadArena());
 
@@ -181,6 +214,7 @@ function loadArena() {
     db.ref("tournaments/" + meetId).on("value", snap => {
       const d = snap.val() || {};
       players = d.players || []; allRounds = d.rounds || []; registeredIPs = d.registeredIPs || [];
+      historicalMatches = d.historicalMatches || [];
       startTime = d.time || ""; startDate = d.date || "";
       if(d.name) {
           document.getElementById("infoDisplay").classList.remove("hidden");
@@ -232,6 +266,12 @@ function submitScore(ri, mi) {
     if(sA === "" || sB === "") return alert("Enter scores!");
     const oldStatus = allRounds[ri][mi].status;
     allRounds[ri][mi].sA = parseInt(sA); allRounds[ri][mi].sB = parseInt(sB); allRounds[ri][mi].status = "finished";
+    
+    // Inject structural timestamp signature for historical logging extraction queries
+    if(!allRounds[ri][mi].timestamp) {
+        allRounds[ri][mi].timestamp = Date.now();
+    }
+
     if(oldStatus !== "finished") { [...allRounds[ri][mi].tA, ...allRounds[ri][mi].tB].forEach(n => { const p = players.find(x => x.name === n); if(p) p.gamesPlayed = (p.gamesPlayed || 0) + 1; }); }
     saveData();
 }
@@ -255,6 +295,72 @@ function renderLeaderboard() {
         <td class="px-4 py-5 text-right font-black text-blue-600 text-sm">${d.pts}</td>
     </tr>`;
   }).join("");
+}
+
+// Monthly Log Computation Engine Engine
+function renderMonthlyLeaderboard() {
+  const currentMonthName = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  document.getElementById("currentMonthLabel").innerText = `Cumulative Standings • ${currentMonthName}`;
+  
+  let s = {}; 
+  players.forEach(p => { s[p.name] = { w:0, d:0, l:0, pts:0, pf:0, pa:0, t:0 }; });
+
+  // Compile matching metrics using the historical immutable logs
+  historicalMatches.forEach(m => {
+      const a = parseInt(m.sA) || 0, b = parseInt(m.sB) || 0;
+      m.tA.forEach(p => { if(!s[p]) s[p] = { w:0, d:0, l:0, pts:0, pf:0, pa:0, t:0 }; s[p].t++; s[p].pf+=a; s[p].pa+=b; if(a>b){s[p].pts+=3; s[p].w++;} else if(a===b){s[p].pts+=1; s[p].d++;} else s[p].l++; });
+      m.tB.forEach(p => { if(!s[p]) s[p] = { w:0, d:0, l:0, pts:0, pf:0, pa:0, t:0 }; s[p].t++; s[p].pf+=b; s[p].pa+=a; if(b>a){s[p].pts+=3; s[p].w++;} else if(a===b){s[p].pts+=1; s[p].d++;} else s[p].l++; });
+  });
+
+  computedMonthlyRanking = Object.entries(s).sort((a,b) => b[1].pts - a[1].pts || (b[1].pf-b[1].pa) - (a[1].pf-a[1].pa));
+  
+  document.getElementById("monthlyLeaderboardBody").innerHTML = computedMonthlyRanking.map(([n, d], i) => {
+    let rk = i + 1; if(i===0) rk="🥇"; else if(i===1) rk="🥈"; else if(i===2) rk="🥉";
+    const diff = d.pf-d.pa;
+    return `<tr class="${i<3?'bg-emerald-50/30':''}">
+        <td class="px-4 py-5 text-center font-black text-sm">${rk}</td>
+        <td class="px-4 py-5"><div class="font-bold uppercase text-xs">${n}</div><div class="text-[8px] text-slate-400 font-bold">${d.t} GP</div></td>
+        <td class="px-4 py-5 text-center text-[10px] font-bold text-slate-600">${d.w}-${d.d}-${d.l}</td>
+        <td class="px-4 py-5 text-center text-[10px] font-black ${diff>=0?'text-green-500':'text-red-400'}">${diff>0?'+':''}${diff}</td>
+        <td class="px-4 py-5 text-right font-black text-emerald-600 text-sm">${d.pts}</td>
+    </tr>`;
+  }).join("");
+}
+
+function shareToWhatsApp() {
+  if (computedMonthlyRanking.length === 0) return alert("No monthly data to share yet!");
+  const monthStr = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+  
+  let text = `🏆 *PADELPILOT ARENA - ${monthStr}* 🏆\n\n`;
+  computedMonthlyRanking.forEach(([name, d], i) => {
+      let medal = `${i + 1}.`;
+      if(i === 0) medal = "🥇";
+      else if(i === 1) medal = "🥈";
+      else if(i === 2) medal = "🥉";
+      const diff = d.pf - d.pa;
+      text += `${medal} *${name.toUpperCase()}* — ${d.pts} pts (${d.w}W-${d.d}D-${d.l}L | ${diff >= 0 ? '+' : ''}${diff})\n`;
+  });
+  text += `\n🎾 _Keep grinding! The monthly ladder updates on every reset._`;
+  
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+function exportToCSV() {
+  if (computedMonthlyRanking.length === 0) return alert("No stats data available to export!");
+  const currentMonthName = new Date().toLocaleString('en-US', { month: 'short', year: 'numeric' }).replace(' ', '_');
+  
+  let csvContent = "data:text/csv;charset=utf-8,Rank,Player,Games Played,Wins,Draws,Losses,Plus Minus,Points\n";
+  computedMonthlyRanking.forEach(([name, d], i) => {
+      csvContent += `${i + 1},${name.toUpperCase()},${d.t},${d.w},${d.d},${d.l},${d.pf - d.pa},${d.pts}\n`;
+  });
+  
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `padelpilot_leaderboard_${currentMonthName.toLowerCase()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function addPlayer() {
@@ -303,12 +409,46 @@ function renderPlayers() { document.getElementById("totalRegCount").innerText = 
 function renderBench() { let busy = []; allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busy.push(...m.tA, ...m.tB); })); const res = players.filter(p => p.checkedIn && !busy.includes(p.name)); document.getElementById("benchCount").innerText = res.length; document.getElementById("benchList").innerHTML = res.map(p => `<div class="bg-blue-50 border border-blue-100 p-3 rounded-2xl text-center text-[10px] font-black uppercase text-blue-600">${p.name}</div>`).join(""); }
 function toggleCheckIn(i) { players[i].checkedIn = !players[i].checkedIn; saveData(); }
 function toggleMatch(ri, mi) { allRounds[ri][mi].status = "playing"; saveData(); }
-function switchTab(t) { document.getElementById('view-arena').classList.toggle('hidden', t !== 'arena'); document.getElementById('view-stats').classList.toggle('hidden', t !== 'stats'); document.getElementById('tab-arena').classList.toggle('active', t === 'arena'); document.getElementById('tab-stats').classList.toggle('active', t === 'stats'); }
-function renderAll() { renderPlayers(); renderBench(); renderAllRounds(); renderLeaderboard(); }
-function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds, registeredIPs }); }
+
+function switchTab(t) { 
+  document.getElementById('view-arena').classList.toggle('hidden', t !== 'arena'); 
+  document.getElementById('view-stats').classList.toggle('hidden', t !== 'stats'); 
+  document.getElementById('view-monthly').classList.toggle('hidden', t !== 'monthly'); 
+  document.getElementById('tab-arena').classList.toggle('active', t === 'arena'); 
+  document.getElementById('tab-stats').classList.toggle('active', t === 'stats'); 
+  document.getElementById('tab-monthly').classList.toggle('active', t === 'monthly'); 
+}
+
+function renderAll() { renderPlayers(); renderBench(); renderAllRounds(); renderLeaderboard(); renderMonthlyLeaderboard(); }
+function saveData() { if(meetId) db.ref("tournaments/" + meetId).update({ players, rounds: allRounds, registeredIPs, historicalMatches }); }
 function checkTimeLock() { if (isAdmin || !startTime || !startDate) return; const now = new Date(); const [y, mon, d] = startDate.split('-'); const [h, m] = startTime.split(':'); const tg = new Date(y, mon - 1, d, h, m); const isL = now < tg; const b = document.getElementById("rotateBtn"); b.disabled = isL; b.classList.toggle("locked-btn", isL); document.getElementById("lockNotice").classList.toggle("hidden", !isL); }
 function unlockDev() { if(prompt("Dev Pass:") === "padel-dev-123") { isAdmin = true; document.getElementById("devIndicator").classList.remove("hidden"); document.getElementById("adminResetContainer").classList.remove("hidden"); renderAll(); } }
-function masterReset() { if(confirm("Wipe all?")) db.ref("tournaments/" + meetId).set(null).then(() => location.search = ""); }
+
+// Strategic Reset Modification: Commits weekly games into historical log before purging active layout
+function weeklyResetOnly() {
+    if(!isAdmin) return alert("Admin authorization required!");
+    if(confirm("Commit active games to the persistent Monthly Board and clear the active rounds display?")) {
+        // Collect completed matches from current active sets
+        let matchesToCommit = [];
+        allRounds.forEach(r => r.forEach(m => {
+            if(m.status === "finished") {
+                matchesToCommit.push(m);
+            }
+        }));
+        
+        // Merge into long-term history array securely
+        historicalMatches = [...historicalMatches, ...matchesToCommit];
+        
+        // Purge active rounds board and reset player court match load counters
+        allRounds = [];
+        players.forEach(p => { p.gamesPlayed = 0; p.checkedIn = false; });
+        
+        saveData();
+        alert("Weekly arena wiped cleanly. All points logged to Monthly Board safely!");
+    }
+}
+
+function masterReset() { if(confirm("Wipe all data? This destroys the live session and historical records permanently!")) db.ref("tournaments/" + meetId).set(null).then(() => location.search = ""); }
 function copyLink() { navigator.clipboard.writeText(window.location.href); alert("Copied!"); }
 </script>
 </body>
