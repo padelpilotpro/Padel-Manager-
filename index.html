@@ -78,7 +78,7 @@
         <input id="tournamentDate" type="date" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none text-sm">
         <input id="tournamentTime" type="time" class="w-full p-4 border rounded-2xl bg-slate-50 outline-none text-sm">
       </div>
-      <button onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold uppercase shadow-lg">Initialize Arena</button>
+      <button id="initBtn" onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold uppercase shadow-lg">Initialize Arena</button>
     </section>
 
     <!-- VOICE SCORING & ANNOUNCER HUB -->
@@ -234,7 +234,7 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 
-firebase.database().enablePersistence().catch(err => console.log("Persistence disabled or already active:", err.code));
+firebase.database().enablePersistence().catch(err => console.log("Persistence disabled or active:", err.code));
 
 const db = firebase.database();
 
@@ -270,6 +270,47 @@ function loadArena() {
       checkTimeLock(); renderAll();
     });
   }
+}
+
+function createTournament() {
+  const nameInput = document.getElementById("tournamentName");
+  const rawName = nameInput ? nameInput.value.trim() : "";
+  
+  if (!rawName) {
+    alert("Please enter a tournament name!");
+    return;
+  }
+  
+  const formattedMeetId = rawName.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-').toLowerCase();
+  if (!formattedMeetId) {
+    alert("Tournament name must contain letters or numbers.");
+    return;
+  }
+
+  const btn = document.getElementById("initBtn");
+  if (btn) { btn.disabled = true; btn.innerText = "INITIALIZING..."; }
+
+  const loc = document.getElementById("tournamentLocation") ? document.getElementById("tournamentLocation").value.trim() : "";
+  const mapLink = document.getElementById("tournamentMap") ? document.getElementById("tournamentMap").value.trim() : "";
+  const dateVal = document.getElementById("tournamentDate") ? document.getElementById("tournamentDate").value : "";
+  const timeVal = document.getElementById("tournamentTime") ? document.getElementById("tournamentTime").value : "";
+  const fmt = document.getElementById("matchFormatSelect") ? document.getElementById("matchFormatSelect").value : "fast4";
+
+  db.ref("tournaments/" + formattedMeetId).set({ 
+    name: rawName, 
+    location: loc, 
+    mapLink: mapLink, 
+    date: dateVal, 
+    time: timeVal, 
+    format: fmt,
+    createdAt: Date.now() 
+  }).then(() => {
+    window.location.href = window.location.pathname + "?meet=" + formattedMeetId;
+  }).catch((err) => {
+    console.error("Firebase Initialization Error:", err);
+    alert("Could not initialize tournament: " + err.message);
+    if (btn) { btn.disabled = false; btn.innerText = "INITIALIZE ARENA"; }
+  });
 }
 
 function getPadelScoreLabel(pA, pB) {
@@ -664,22 +705,6 @@ function updateManualDropdowns() {
     const av = players.filter(p => !busy.includes(p.name));
     av.sort((a, b) => a.name.localeCompare(b.name));
     ['p1','p2','p3','p4'].forEach(id => { document.getElementById(id).innerHTML = `<option value="">Player</option>` + av.map(p => `<option value="${p.name}">${p.name.toUpperCase()}</option>`).join(""); });
-}
-
-function createTournament() {
-  const n = document.getElementById("tournamentName").value.trim(); if(!n) return alert("Name it!");
-  meetId = n.replace(/\s+/g,'-').toLowerCase();
-  const format = document.getElementById("matchFormatSelect").value;
-
-  db.ref("tournaments/"+meetId).update({ 
-    name: n, 
-    location: document.getElementById("tournamentLocation").value, 
-    mapLink: document.getElementById("tournamentMap").value, 
-    date: document.getElementById("tournamentDate").value, 
-    time: document.getElementById("tournamentTime").value, 
-    format: format,
-    createdAt: Date.now() 
-  }).then(() => { window.location.search = "?meet=" + meetId; });
 }
 
 function renderPlayers() { document.getElementById("totalRegCount").innerText = players.length; document.getElementById("playersList").innerHTML = players.map((p, i) => `<div class="flex items-center justify-between p-3 border rounded-xl bg-slate-50 mb-1"><div class="flex items-center gap-3"><span class="text-xs font-bold uppercase">${p.name}</span>${p.checkedIn ? '<span class="ready-badge">READY</span>' : '<span class="away-badge">AWAY</span>'}</div><button onclick="toggleCheckIn(${i})" class="text-[9px] font-black px-2 py-1 bg-white border rounded shadow-sm">${p.checkedIn?'AWAY':'READY'}</button></div>`).join(""); }
