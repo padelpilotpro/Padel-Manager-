@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PadelPilot Arena | Pro v3.7</title>
+  <title>PadelPilot Arena | Pro v3.8</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -71,6 +71,18 @@
       </div>
       <button onclick="createTournament()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold uppercase shadow-lg">Initialize Arena</button>
     </section>
+
+    <!-- VOICE SCORING INTEGRATION -->
+    <div class="glass-card border-emerald-100 bg-emerald-50/20 flex items-center justify-between">
+      <div>
+        <div class="text-[10px] font-black uppercase text-emerald-600 tracking-wider">Court Voice Scoring</div>
+        <p id="voice-status" class="text-xs text-slate-500 font-medium">Tap to enable microphone</p>
+      </div>
+      <button id="toggle-voice-btn" onclick="toggleVoiceScoring()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-2xl font-bold text-xs uppercase shadow-md shadow-emerald-100 transition-all flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+        <span id="voice-btn-text">Enable</span>
+      </button>
+    </div>
 
     <div class="space-y-3">
       <div class="flex gap-2">
@@ -202,6 +214,10 @@ const db = firebase.database();
 let meetId = null, players = [], allRounds = [], historicalMatches = [], registeredIPs = [], isAdmin = false, userIP = "", startTime = "", startDate = "", manualModeActive = false;
 let computedMonthlyRanking = [];
 
+// Voice Recognition State Variables
+let recognition = null;
+let isVoiceListening = false;
+
 fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => { userIP = d.ip; loadArena(); }).catch(() => loadArena());
 
 function loadArena() {
@@ -273,6 +289,107 @@ function submitScore(ri, mi) {
 
     if(oldStatus !== "finished") { [...allRounds[ri][mi].tA, ...allRounds[ri][mi].tB].forEach(n => { const p = players.find(x => x.name === n); if(p) p.gamesPlayed = (p.gamesPlayed || 0) + 1; }); }
     saveData();
+}
+
+// ==========================================
+// VOICE SCORE TRACKING SYSTEM (WEB SPEECH API)
+// ==========================================
+function toggleVoiceScoring() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+        alert("Speech recognition is not supported in this browser. Please use Chrome or Safari.");
+        return;
+    }
+
+    if (!isVoiceListening) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+            isVoiceListening = true;
+            document.getElementById('voice-status').innerText = "Listening for score commands...";
+            document.getElementById('voice-status').className = "text-xs text-emerald-600 font-bold animate-pulse";
+            document.getElementById('voice-btn-text').innerText = "Disable";
+            document.getElementById('toggle-voice-btn').className = "bg-rose-600 hover:bg-rose-500 text-white px-5 py-3 rounded-2xl font-bold text-xs uppercase shadow-md shadow-rose-100 transition-all flex items-center gap-2";
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+            console.log("Voice heard:", transcript);
+            parseVoiceCommand(transcript);
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error", event.error);
+        };
+
+        recognition.onend = () => {
+            if (isVoiceListening) {
+                try { recognition.start(); } catch (e) { console.log(e); }
+            }
+        };
+
+        recognition.start();
+    } else {
+        isVoiceListening = false;
+        if (recognition) {
+            recognition.stop();
+        }
+        document.getElementById('voice-status').innerText = "Tap to enable microphone";
+        document.getElementById('voice-status').className = "text-xs text-slate-500 font-medium";
+        document.getElementById('voice-btn-text').innerText = "Enable";
+        document.getElementById('toggle-voice-btn').className = "bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-2xl font-bold text-xs uppercase shadow-md shadow-emerald-100 transition-all flex items-center gap-2";
+    }
+}
+
+function parseVoiceCommand(command) {
+    // Find currently active playing match
+    let activeRi = -1, activeMi = -1;
+    allRounds.forEach((r, ri) => {
+        r.forEach((m, mi) => {
+            if (m.status === "playing") {
+                activeRi = ri;
+                activeMi = mi;
+            }
+        });
+    });
+
+    if (activeRi === -1 || activeMi === -1) {
+        console.log("No active playing match found for voice command.");
+        return;
+    }
+
+    const sAInput = document.getElementById(`sA-${activeRi}-${activeMi}`);
+    const sBInput = document.getElementById(`sB-${activeRi}-${activeMi}`);
+
+    if (!sAInput || !sBInput) return;
+
+    let currentSA = parseInt(sAInput.value) || 0;
+    let currentSB = parseInt(sBInput.value) || 0;
+
+    if (command.includes("point team a") || command.includes("team one") || command.includes("point one")) {
+        currentSA += 1;
+        sAInput.value = currentSA;
+        submitScore(activeRi, activeMi);
+        speakConfirmation("Team A point");
+    } 
+    else if (command.includes("point team b") || command.includes("team two") || command.includes("point two")) {
+        currentSB += 1;
+        sBInput.value = currentSB;
+        submitScore(activeRi, activeMi);
+        speakConfirmation("Team B point");
+    }
+}
+
+function speakConfirmation(text) {
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.1;
+        window.speechSynthesis.speak(utterance);
+    }
 }
 
 function renderLeaderboard() {
@@ -390,7 +507,6 @@ function createManualMatch() {
 
 function toggleManualMode() { manualModeActive = !manualModeActive; document.getElementById("manualBuilder").classList.toggle("hidden", !manualModeActive); if(manualModeActive) updateManualDropdowns(); }
 
-// FIXED: Filter adjusted to allow selecting from ALL registered players, not just checked-in ones.
 function updateManualDropdowns() {
     let busy = []; allRounds.forEach(r => r.forEach(m => { if(m.status === "playing") busy.push(...m.tA, ...m.tB); }));
     const av = players.filter(p => !busy.includes(p.name));
