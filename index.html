@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3359/3359245.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -233,8 +233,6 @@ const firebaseConfig = {
   projectId: "padelpilot-b8e47"
 };
 firebase.initializeApp(firebaseConfig);
-
-firebase.database().enablePersistence().catch(err => console.log("Persistence disabled or active:", err.code));
 
 const db = firebase.database();
 
